@@ -68,15 +68,15 @@ X86_64 = not WINDOWS and (os.uname()[4] == 'x86_64')
 
 
 if LINUX:
-    from linux import *
+    from .linux import *
     if scapy.config.conf.use_pcap or scapy.config.conf.use_dnet:
-        from pcapdnet import *
+        from .pcapdnet import *
 elif OPENBSD or FREEBSD or NETBSD or DARWIN:
-    from bsd import *
+    from .bsd import *
 elif SOLARIS:
-    from solaris import *
+    from .solaris import *
 elif WINDOWS:
-    from windows import *
+    from .windows import *
 
 if scapy.config.conf.iface is None:
     scapy.config.conf.iface = LOOPBACK_NAME
@@ -88,7 +88,7 @@ def get_if_raw_addr6(iff):
     interface, in network format. If no global address is found, None 
     is returned. 
     """
-    r = filter(lambda x: x[2] == iff and x[1] == IPV6_ADDR_GLOBAL, in6_getifaddr())
+    r = [x for x in in6_getifaddr() if x[2] == iff and x[1] == IPV6_ADDR_GLOBAL]
     if len(r) == 0:
         return None
     else:

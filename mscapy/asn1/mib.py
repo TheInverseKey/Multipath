@@ -31,7 +31,7 @@ class MIBDict(DADict):
             x += "."
         max=0
         root="."
-        for k in self.keys():
+        for k in list(self.keys()):
             if x.startswith(self[k]+"."):
                 if max < len(self[k]):
                     max = len(self[k])
@@ -50,8 +50,8 @@ class MIBDict(DADict):
         xl[p] = self[xl[p]] 
         return ".".join(xl[p:])
     def _make_graph(self, other_keys=[], **kargs):
-        nodes = [(k,self[k]) for k in self.keys()]
-        oids = [self[k] for k in self.keys()]
+        nodes = [(k,self[k]) for k in list(self.keys())]
+        oids = [self[k] for k in list(self.keys())]
         for k in other_keys:
             if k not in oids:
                 nodes.append(self.oidname(k),k)
@@ -68,7 +68,7 @@ class MIBDict(DADict):
         s += "}\n"
         do_graph(s, **kargs)
     def __len__(self):
-        return len(self.keys())
+        return len(list(self.keys()))
 
 
 def mib_register(ident, value, the_mib, unresolved):
@@ -96,7 +96,7 @@ def mib_register(ident, value, the_mib, unresolved):
         return False
     else:
         the_mib[ident] = resval
-        keys = unresolved.keys()
+        keys = list(unresolved.keys())
         i = 0
         while i < len(keys):
             k = keys[i]
@@ -113,7 +113,7 @@ def mib_register(ident, value, the_mib, unresolved):
 def load_mib(filenames):
     the_mib = {'iso': ['1']}
     unresolved = {}
-    for k in conf.mib.keys():
+    for k in list(conf.mib.keys()):
         mib_register(k, conf.mib[k].split("."), the_mib, unresolved)
 
     if type(filenames) is str:
@@ -135,9 +135,9 @@ def load_mib(filenames):
                 mib_register(ident, oid, the_mib, unresolved)
 
     newmib = MIBDict(_name="MIB")
-    for k,o in the_mib.iteritems():
+    for k,o in the_mib.items():
         newmib[k]=".".join(o)
-    for k,o in unresolved.iteritems():
+    for k,o in unresolved.items():
         newmib[k]=".".join(o)
 
     conf.mib=newmib

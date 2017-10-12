@@ -7,7 +7,7 @@
 IPv4 (Internet Protocol v4).
 """
 
-import os,time,struct,re,socket,new
+import os,time,struct,re,socket,types
 from select import select
 from collections import defaultdict
 from scapy.utils import checksum
@@ -415,14 +415,14 @@ class IP(Packet, IPTools):
         for p in self:
             try:
                 s.sendto(str(p), (p.dst,0))
-            except socket.error, msg:
+            except socket.error as msg:
                 log_runtime.error(msg)
             if slp:
                 time.sleep(slp)
     def route(self):
         dst = self.dst
         if isinstance(dst,Gen):
-            dst = iter(dst).next()
+            dst = next(iter(dst))
         return conf.route.route(dst)
     def hashret(self):
         if ( (self.proto == socket.IPPROTO_ICMP)
@@ -853,7 +853,7 @@ def defrag(plist):
         frags[uniq].append(p)
     defrag = []
     missfrag = []
-    for lst in frags.itervalues():
+    for lst in frags.values():
         lst.sort(key=lambda x: x.frag)
         p = lst[0]
         lastp = lst[-1]
@@ -914,7 +914,7 @@ def defragment(plist):
 
     defrag = []
     missfrag = []
-    for lst in frags.itervalues():
+    for lst in frags.values():
         lst.sort(key=lambda x: x.frag)
         p = lst[0]
         lastp = lst[-1]
@@ -973,8 +973,8 @@ def defragment(plist):
 ### Add timeskew_graph() method to PacketList
 def _packetlist_timeskew_graph(self, ip, **kargs):
     """Tries to graph the timeskew between the timestamps and real time for a given ip"""
-    res = map(lambda x: self._elt2pkt(x), self.res)
-    b = filter(lambda x:x.haslayer(IP) and x.getlayer(IP).src == ip and x.haslayer(TCP), res)
+    res = [self._elt2pkt(x) for x in self.res]
+    b = [x for x in res if x.haslayer(IP) and x.getlayer(IP).src == ip and x.haslayer(TCP)]
     c = []
     for p in b:
         opts = p.getlayer(TCP).options
@@ -984,12 +984,12 @@ def _packetlist_timeskew_graph(self, ip, **kargs):
     if not c:
         warning("No timestamps found in packet list")
         return
-    d = map(lambda (x,y): (x%2000,((x-c[0][0])-((y-c[0][1])/1000.0))),c)
+    d = [(x_y1[0]%2000,((x_y1[0]-c[0][0])-((x_y1[1]-c[0][1])/1000.0))) for x_y1 in c]
     g = Gnuplot.Gnuplot()
     g.plot(Gnuplot.Data(d,**kargs))
     return g
 
-PacketList.timeskew_graph = new.instancemethod(_packetlist_timeskew_graph, None, PacketList)
+PacketList.timeskew_graph = types.MethodType(_packetlist_timeskew_graph, PacketList)
 
 
 ### Create a new packet list
@@ -1003,9 +1003,9 @@ class TracerouteResult(SndRcvList):
         self.nloc = None
 
     def show(self):
-        return self.make_table(lambda (s,r): (s.sprintf("%IP.dst%:{TCP:tcp%ir,TCP.dport%}{UDP:udp%ir,UDP.dport%}{ICMP:ICMP}"),
-                                              s.ttl,
-                                              r.sprintf("%-15s,IP.src% {TCP:%TCP.flags%}{ICMP:%ir,ICMP.type%}")))
+        return self.make_table(lambda s_r: (s_r[0].sprintf("%IP.dst%:{TCP:tcp%ir,TCP.dport%}{UDP:udp%ir,UDP.dport%}{ICMP:ICMP}"),
+                                              s_r[0].ttl,
+                                              s_r[1].sprintf("%-15s,IP.src% {TCP:%TCP.flags%}{ICMP:%ir,ICMP.type%}")))
 
 
     def get_trace(self):
@@ -1017,12 +1017,12 @@ class TracerouteResult(SndRcvList):
             if d not in trace:
                 trace[d] = {}
             trace[d][s[IP].ttl] = r[IP].src, ICMP not in r
-        for k in trace.values():
-            m = filter(lambda x:k[x][1], k.keys())
+        for k in list(trace.values()):
+            m = [x for x in list(k.keys()) if k[x][1]]
             if not m:
                 continue
             m = min(m)
-            for l in k.keys():
+            for l in list(k.keys()):
                 if l > m:
                     del(k[l])
         return trace
@@ -1062,7 +1062,7 @@ class TracerouteResult(SndRcvList):
         for i in trace:
             tr = trace[i]
             tr3d[i] = []
-            ttl = tr.keys()
+            ttl = list(tr.keys())
             for t in range(1,max(ttl)+1):
                 if t not in rings:
                     rings[t] = []
@@ -1087,13 +1087,13 @@ class TracerouteResult(SndRcvList):
                 s = IPsphere(pos=((l-1)*visual.cos(2*i*visual.pi/l),(l-1)*visual.sin(2*i*visual.pi/l),2*t),
                              ip = r[i][0],
                              color = col)
-                for trlst in tr3d.values():
+                for trlst in list(tr3d.values()):
                     if t <= len(trlst):
                         if trlst[t-1] == i:
                             trlst[t-1] = s
         forecol = colgen(0.625, 0.4375, 0.25, 0.125)
-        for trlst in tr3d.values():
-            col = forecol.next()
+        for trlst in list(tr3d.values()):
+            col = next(forecol)
             start = (0,0,0)
             for ip in trlst:
                 visual.cylinder(pos=start,axis=ip.pos-start,color=col,radius=0.2)
@@ -1151,7 +1151,7 @@ class TracerouteResult(SndRcvList):
                 trace_id = (s.src,s.dst,s.proto,0)
             trace = rt.get(trace_id,{})
             if not r.haslayer(ICMP) or r.type != 11:
-                if ports_done.has_key(trace_id):
+                if trace_id in ports_done:
                     continue
                 ports_done[trace_id] = None
             trace[s.ttl] = r.src
@@ -1173,7 +1173,7 @@ class TracerouteResult(SndRcvList):
             if loctrace:
                 trt[trace_id] = loctrace
 
-        tr = map(lambda x: Gnuplot.Data(x,with_="lines"), trt.values())
+        tr = [Gnuplot.Data(x,with_="lines") for x in list(trt.values())]
         g = Gnuplot.Gnuplot()
         world = Gnuplot.File(conf.gnuplot_world,with_="lines")
         g.plot(world,*tr)
@@ -1230,11 +1230,11 @@ class TracerouteResult(SndRcvList):
         bhip = {}
         for rtk in rt:
             trace = rt[rtk]
-            k = trace.keys()
+            k = list(trace.keys())
             for n in range(min(k), max(k)):
-                if not trace.has_key(n):
-                    trace[n] = unknown_label.next()
-            if not ports_done.has_key(rtk):
+                if n not in trace:
+                    trace[n] = next(unknown_label)
+            if rtk not in ports_done:
                 if rtk[2] == 1: #ICMP
                     bh = "%s %i/icmp" % (rtk[1],rtk[3])
                 elif rtk[2] == 6: #TCP
@@ -1250,7 +1250,7 @@ class TracerouteResult(SndRcvList):
                 blackholes.append(bh)
     
         # Find AS numbers
-        ASN_query_list = dict.fromkeys(map(lambda x:x.rsplit(" ",1)[0],ips)).keys()
+        ASN_query_list = list(dict.fromkeys([x.rsplit(" ",1)[0] for x in ips]).keys())
         if ASres is None:            
             ASNlist = []
         else:
@@ -1282,7 +1282,7 @@ class TracerouteResult(SndRcvList):
         s += "\n#ASN clustering\n"
         for asn in ASNs:
             s += '\tsubgraph cluster_%s {\n' % asn
-            col = backcolorlist.next()
+            col = next(backcolorlist)
             s += '\t\tcolor="#%s%s%s";' % col
             s += '\t\tnode [fillcolor="#%s%s%s",style=filled];' % col
             s += '\t\tfontsize = 10;'
@@ -1320,10 +1320,10 @@ class TracerouteResult(SndRcvList):
     
     
         for rtk in rt:
-            s += "#---[%s\n" % `rtk`
-            s += '\t\tedge [color="#%s%s%s"];\n' % forecolorlist.next()
+            s += "#---[%s\n" % repr(rtk)
+            s += '\t\tedge [color="#%s%s%s"];\n' % next(forecolorlist)
             trace = rt[rtk]
-            k = trace.keys()
+            k = list(trace.keys())
             for n in range(min(k), max(k)):
                 s += '\t%s ->\n' % trace[n]
             s += '\t%s;\n' % trace[max(k)]
@@ -1386,7 +1386,7 @@ traceroute(target, [maxttl=30,] [dport=80,] [sport=80,] [verbose=conf.verb]) -> 
 class TCP_client(Automaton):
     
     def parse_args(self, ip, port, *args, **kargs):
-        self.dst = iter(Net(ip)).next()
+        self.dst = next(iter(Net(ip)))
         self.dport = port
         self.sport = random.randrange(0,2**16)
         self.l4 = IP(dst=ip)/TCP(sport=self.sport, dport=self.dport, flags=0,
@@ -1534,14 +1534,14 @@ report_ports(target, ports) -> string"""
 
 
 def IPID_count(lst, funcID=lambda x:x[1].id, funcpres=lambda x:x[1].summary()):
-    idlst = map(funcID, lst)
+    idlst = list(map(funcID, lst))
     idlst.sort()
-    classes = [idlst[0]]+map(lambda x:x[1],filter(lambda (x,y): abs(x-y)>50, map(lambda x,y: (x,y),idlst[:-1], idlst[1:])))
-    lst = map(lambda x:(funcID(x), funcpres(x)), lst)
+    classes = [idlst[0]]+[x[1] for x in [x_y for x_y in map(lambda x,y: (x,y),idlst[:-1], idlst[1:]) if abs(x_y[0]-x_y[1])>50]]
+    lst = [(funcID(x), funcpres(x)) for x in lst]
     lst.sort()
-    print "Probably %i classes:" % len(classes), classes
+    print("Probably %i classes:" % len(classes), classes)
     for id,pr in lst:
-        print "%5i" % id, pr
+        print("%5i" % id, pr)
     
     
 def fragleak(target,sport=123, dport=123, timeout=0.2, onlyasc=0):
@@ -1570,7 +1570,7 @@ def fragleak(target,sport=123, dport=123, timeout=0.2, onlyasc=0):
                 if ans.payload.payload.dst != target:
                     continue
                 if ans.src  != target:
-                    print "leak from", ans.src,
+                    print("leak from", ans.src)
 
 
 #                print repr(ans)
@@ -1615,3 +1615,4 @@ conf.stats_dot11_protocols += [TCP,UDP,ICMP]
 
 if conf.ipv6_enabled:
     import scapy.layers.inet6
+ 

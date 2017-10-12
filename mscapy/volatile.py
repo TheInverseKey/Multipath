@@ -8,8 +8,8 @@ Fields that hold random numbers.
 """
 
 import random,time,math
-from base_classes import Net
-from utils import corrupt_bits,corrupt_bytes
+from .base_classes import Net
+from .utils import corrupt_bits,corrupt_bytes
 
 ####################
 ## Random numbers ##
@@ -43,11 +43,11 @@ class RandomEnumeration:
 
     def __iter__(self):
         return self
-    def next(self):
+    def __next__(self):
         while True:
             if self.turns == 0 or (self.i == 0 and self.renewkeys):
                 self.cnt_key = self.rnd.randint(0,2**self.n-1)
-                self.sbox = [self.rnd.randint(0,self.fsmask) for k in xrange(self.sbox_size)]
+                self.sbox = [self.rnd.randint(0,self.fsmask) for k in range(self.sbox_size)]
             self.turns += 1
             while self.i < 2**self.n:
                 ct = self.i^self.cnt_key
@@ -122,71 +122,71 @@ class RandEnum(RandNum):
     def __init__(self, min, max):
         self.seq = RandomEnumeration(min,max)
     def _fix(self):
-        return self.seq.next()
+        return next(self.seq)
 
 class RandByte(RandNum):
     def __init__(self):
-        RandNum.__init__(self, 0, 2L**8-1)
+        RandNum.__init__(self, 0, 2**8-1)
 
 class RandSByte(RandNum):
     def __init__(self):
-        RandNum.__init__(self, -2L**7, 2L**7-1)
+        RandNum.__init__(self, -2**7, 2**7-1)
 
 class RandShort(RandNum):
     def __init__(self):
-        RandNum.__init__(self, 0, 2L**16-1)
+        RandNum.__init__(self, 0, 2**16-1)
 
 class RandSShort(RandNum):
     def __init__(self):
-        RandNum.__init__(self, -2L**15, 2L**15-1)
+        RandNum.__init__(self, -2**15, 2**15-1)
 
 class RandInt(RandNum):
     def __init__(self):
-        RandNum.__init__(self, 0, 2L**32-1)
+        RandNum.__init__(self, 0, 2**32-1)
 
 class RandSInt(RandNum):
     def __init__(self):
-        RandNum.__init__(self, -2L**31, 2L**31-1)
+        RandNum.__init__(self, -2**31, 2**31-1)
 
 class RandLong(RandNum):
     def __init__(self):
-        RandNum.__init__(self, 0, 2L**64-1)
+        RandNum.__init__(self, 0, 2**64-1)
 
 class RandSLong(RandNum):
     def __init__(self):
-        RandNum.__init__(self, -2L**63, 2L**63-1)
+        RandNum.__init__(self, -2**63, 2**63-1)
 
 class RandEnumByte(RandEnum):
     def __init__(self):
-        RandEnum.__init__(self, 0, 2L**8-1)
+        RandEnum.__init__(self, 0, 2**8-1)
 
 class RandEnumSByte(RandEnum):
     def __init__(self):
-        RandEnum.__init__(self, -2L**7, 2L**7-1)
+        RandEnum.__init__(self, -2**7, 2**7-1)
 
 class RandEnumShort(RandEnum):
     def __init__(self):
-        RandEnum.__init__(self, 0, 2L**16-1)
+        RandEnum.__init__(self, 0, 2**16-1)
 
 class RandEnumSShort(RandEnum):
     def __init__(self):
-        RandEnum.__init__(self, -2L**15, 2L**15-1)
+        RandEnum.__init__(self, -2**15, 2**15-1)
 
 class RandEnumInt(RandEnum):
     def __init__(self):
-        RandEnum.__init__(self, 0, 2L**32-1)
+        RandEnum.__init__(self, 0, 2**32-1)
 
 class RandEnumSInt(RandEnum):
     def __init__(self):
-        RandEnum.__init__(self, -2L**31, 2L**31-1)
+        RandEnum.__init__(self, -2**31, 2**31-1)
 
 class RandEnumLong(RandEnum):
     def __init__(self):
-        RandEnum.__init__(self, 0, 2L**64-1)
+        RandEnum.__init__(self, 0, 2**64-1)
 
 class RandEnumSLong(RandEnum):
     def __init__(self):
-        RandEnum.__init__(self, -2L**63, 2L**63-1)
+        RandEnum.__init__(self, -2**63, 2**63-1)
 
 class RandChoice(RandField):
     def __init__(self, *args):
@@ -210,12 +210,12 @@ class RandString(RandField):
 
 class RandBin(RandString):
     def __init__(self, size=None):
-        RandString.__init__(self, size, "".join(map(chr,range(256))))
+        RandString.__init__(self, size, "".join(map(chr,list(range(256)))))
 
 
 class RandTermString(RandString):
     def __init__(self, size, term):
-        RandString.__init__(self, size, "".join(map(chr,range(1,256))))
+        RandString.__init__(self, size, "".join(map(chr,list(range(1,256)))))
         self.term = term
     def _fix(self):
         return RandString._fix(self)+self.term
@@ -309,14 +309,14 @@ class RandOID(RandString):
             return "<%s [%s]>" % (self.__class__.__name__, self.ori_fmt)
     def _fix(self):
         if self.fmt is None:
-            return ".".join(map(str, [self.idnum for i in xrange(1+self.depth)]))
+            return ".".join(map(str, [self.idnum for i in range(1+self.depth)]))
         else:
             oid = []
             for i in self.fmt:
                 if i == "*":
                     oid.append(str(self.idnum))
                 elif i == "**":
-                    oid += map(str, [self.idnum for i in xrange(1+self.depth)])
+                    oid += list(map(str, [self.idnum for i in range(1+self.depth)]))
                 elif type(i) is tuple:
                     oid.append(str(random.randrange(*i)))
                 else:
@@ -346,11 +346,11 @@ class RandRegExp(RandField):
             else:
                 c1 = s[p-1]
                 c2 = s[p+1]
-                rng = "".join(map(chr, range(ord(c1),ord(c2)+1)))
+                rng = "".join(map(chr, list(range(ord(c1),ord(c2)+1))))
                 s = s[:p-1]+rng+s[p+1:]
         res = m+s
         if invert:
-            res = "".join([chr(x) for x in xrange(256) if chr(x) not in res])
+            res = "".join([chr(x) for x in range(256) if chr(x) not in res])
         return res
 
     @staticmethod
@@ -467,7 +467,7 @@ class RandRegExp(RandField):
                 if random.randint(0,1):
                     current.pop()
             elif c == '.':
-                current.append(RandChoice(*[chr(x) for x in xrange(256)]))
+                current.append(RandChoice(*[chr(x) for x in range(256)]))
             elif c == '$' or c == '^':
                 pass
             else:
@@ -507,35 +507,35 @@ class RandSingNum(RandSingularity):
 
 class RandSingByte(RandSingNum):
     def __init__(self):
-        RandSingNum.__init__(self, 0, 2L**8-1)
+        RandSingNum.__init__(self, 0, 2**8-1)
 
 class RandSingSByte(RandSingNum):
     def __init__(self):
-        RandSingNum.__init__(self, -2L**7, 2L**7-1)
+        RandSingNum.__init__(self, -2**7, 2**7-1)
 
 class RandSingShort(RandSingNum):
     def __init__(self):
-        RandSingNum.__init__(self, 0, 2L**16-1)
+        RandSingNum.__init__(self, 0, 2**16-1)
 
 class RandSingSShort(RandSingNum):
     def __init__(self):
-        RandSingNum.__init__(self, -2L**15, 2L**15-1)
+        RandSingNum.__init__(self, -2**15, 2**15-1)
 
 class RandSingInt(RandSingNum):
     def __init__(self):
-        RandSingNum.__init__(self, 0, 2L**32-1)
+        RandSingNum.__init__(self, 0, 2**32-1)
 
 class RandSingSInt(RandSingNum):
     def __init__(self):
-        RandSingNum.__init__(self, -2L**31, 2L**31-1)
+        RandSingNum.__init__(self, -2**31, 2**31-1)
 
 class RandSingLong(RandSingNum):
     def __init__(self):
-        RandSingNum.__init__(self, 0, 2L**64-1)
+        RandSingNum.__init__(self, 0, 2**64-1)
 
 class RandSingSLong(RandSingNum):
     def __init__(self):
-        RandSingNum.__init__(self, -2L**63, 2L**63-1)
+        RandSingNum.__init__(self, -2**63, 2**63-1)
 
 class RandSingString(RandSingularity):
     def __init__(self):

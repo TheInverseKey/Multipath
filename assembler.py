@@ -45,7 +45,7 @@ class MPTCPConvo(object):
         for opt in pkt[TCP].options:
             for o in opt.mptcp:
                 subtype = MPTCP_subtypes[o.subtype]
-                if subtype in packet_methods.keys():
+                if subtype in list(packet_methods.keys()):
                     """Calls function based on subtype"""
                     packet_methods[subtype](pkt)
                 else:
@@ -53,4 +53,4 @@ class MPTCPConvo(object):
 
 
 if __name__ == '__main__':
-    sniff(iface = "enp0s3", prn = lambda x: x.show(), filter = "tcp[54] == 30", store = 0)
+    sniff(iface = "ens33", prn = lambda x: x.show(), filter = "tcp[54] == 30", store = 0)

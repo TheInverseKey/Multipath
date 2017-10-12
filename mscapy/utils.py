@@ -9,17 +9,17 @@ General utility functions.
 
 import os,sys,socket,types
 import random,time
-import gzip,zlib,cPickle
+import gzip,zlib,pickle
 import re,struct,array
 import subprocess
 
 import warnings
 warnings.filterwarnings("ignore","tempnam",RuntimeWarning, __name__)
 
-from config import conf
-from data import MTU
-from error import log_runtime,log_loading,log_interactive
-from base_classes import BasePacketList
+from .config import conf
+from .data import MTU
+from .error import log_runtime,log_loading,log_interactive
+from .base_classes import BasePacketList
 
 WINDOWS=sys.platform.startswith("win32")
 
@@ -54,7 +54,7 @@ def sane(x):
     return r
 
 def lhex(x):
-    if type(x) in (int,long):
+    if type(x) in (int,int):
         return hex(x)
     elif type(x) is tuple:
         return "(%s)" % ", ".join(map(lhex, x))
@@ -69,16 +69,16 @@ def hexdump(x):
     l = len(x)
     i = 0
     while i < l:
-        print "%04x  " % i,
+        print("%04x  " % i, end=' ')
         for j in range(16):
             if i+j < l:
-                print "%02X" % ord(x[i+j]),
+                print("%02X" % ord(x[i+j]), end=' ')
             else:
-                print "  ",
+                print("  ", end=' ')
             if j%16 == 7:
-                print "",
-        print " ",
-        print sane_color(x[i:i+16])
+                print("", end=' ')
+        print(" ", end=' ')
+        print(sane_color(x[i:i+16]))
         i += 16
 
 @conf.commands.register
@@ -87,19 +87,19 @@ def linehexdump(x, onlyasc=0, onlyhex=0):
     l = len(x)
     if not onlyasc:
         for i in range(l):
-            print "%02X" % ord(x[i]),
-        print "",
+            print("%02X" % ord(x[i]), end=' ')
+        print("", end=' ')
     if not onlyhex:
-        print sane_color(x)
+        print(sane_color(x))
 
 def chexdump(x):
     x=str(x)
-    print ", ".join(map(lambda x: "%#04x"%ord(x), x))
+    print(", ".join(["%#04x"%ord(x) for x in x]))
     
 def hexstr(x, onlyasc=0, onlyhex=0):
     s = []
     if not onlyasc:
-        s.append(" ".join(map(lambda x:"%02x"%ord(x), x)))
+        s.append(" ".join(["%02x"%ord(x) for x in x]))
     if not onlyhex:
         s.append(sane(x)) 
     return "  ".join(s)
@@ -164,45 +164,45 @@ def hexdiff(x,y):
             while not linex[j]:
                 j += 1
                 xd -= 1
-            print colorize[doy-dox]("%04x" % xd),
+            print(colorize[doy-dox]("%04x" % xd), end=' ')
             x += xx
             line=linex
         else:
-            print "    ",
+            print("    ", end=' ')
         if doy:
             yd = y
             j = 0
             while not liney[j]:
                 j += 1
                 yd -= 1
-            print colorize[doy-dox]("%04x" % yd),
+            print(colorize[doy-dox]("%04x" % yd), end=' ')
             y += yy
             line=liney
         else:
-            print "    ",
+            print("    ", end=' ')
             
-        print " ",
+        print(" ", end=' ')
         
         cl = ""
         for j in range(16):
             if i+j < l:
                 if line[j]:
                     col = colorize[(linex[j]!=liney[j])*(doy-dox)]
-                    print col("%02X" % ord(line[j])),
+                    print(col("%02X" % ord(line[j])), end=' ')
                     if linex[j]==liney[j]:
                         cl += sane_color(line[j])
                     else:
                         cl += col(sane(line[j]))
                 else:
-                    print "  ",
+                    print("  ", end=' ')
                     cl += " "
             else:
-                print "  ",
+                print("  ", end=' ')
             if j == 7:
-                print "",
+                print("", end=' ')
 
 
-        print " ",cl
+        print(" ",cl)
 
         if doy or not yy:
             doy=0
@@ -241,7 +241,7 @@ def warning(x):
     log_runtime.warning(x)
 
 def mac2str(mac):
-    return "".join(map(lambda x: chr(int(x,16)), mac.split(":")))
+    return "".join([chr(int(x,16)) for x in mac.split(":")])
 
 def str2mac(s):
     return ("%02x:"*6)[:-1] % tuple(map(ord, s)) 
@@ -280,7 +280,7 @@ def ltoa(x):
     return inet_ntoa(struct.pack("!I", x&0xffffffff))
 
 def itom(x):
-    return (0xffffffff00000000L>>x)&0xffffffffL
+    return (0xffffffff00000000>>x)&0xffffffff
 
 def do_graph(graph,prog=None,format=None,target=None,type=None,string=None,options=None):
     """do_graph(graph, prog=conf.prog.dot, format="svg",
@@ -394,7 +394,7 @@ class Enum_metaclass(type):
     element_class = EnumElement
     def __new__(cls, name, bases, dct):
         rdict={}
-        for k,v in dct.iteritems():
+        for k,v in dct.items():
             if type(v) is int:
                 v = cls.element_class(k,v)
                 dct[k] = v
@@ -418,19 +418,19 @@ class Enum_metaclass(type):
 
 
 def export_object(obj):
-    print gzip.zlib.compress(cPickle.dumps(obj,2),9).encode("base64")
+    print(gzip.zlib.compress(pickle.dumps(obj,2),9).encode("base64"))
 
 def import_object(obj=None):
     if obj is None:
         obj = sys.stdin.read()
-    return cPickle.loads(gzip.zlib.decompress(obj.strip().decode("base64")))
+    return pickle.loads(gzip.zlib.decompress(obj.strip().decode("base64")))
 
 
 def save_object(fname, obj):
-    cPickle.dump(obj,gzip.open(fname,"wb"))
+    pickle.dump(obj,gzip.open(fname,"wb"))
 
 def load_object(fname):
-    return cPickle.load(gzip.open(fname,"rb"))
+    return pickle.load(gzip.open(fname,"rb"))
 
 @conf.commands.register
 def corrupt_bytes(s, p=0.01, n=None):
@@ -439,7 +439,7 @@ def corrupt_bytes(s, p=0.01, n=None):
     l = len(s)
     if n is None:
         n = max(1,int(l*p))
-    for i in random.sample(xrange(l), n):
+    for i in random.sample(range(l), n):
         s[i] = (s[i]+random.randint(1,255))%256
     return s.tostring()
 
@@ -450,7 +450,7 @@ def corrupt_bits(s, p=0.01, n=None):
     l = len(s)*8
     if n is None:
         n = max(1,int(l*p))
-    for i in random.sample(xrange(l), n):
+    for i in random.sample(range(l), n):
         s[i/8] ^= 1 << (i%8)
     return s.tostring()
 
@@ -506,7 +506,7 @@ class RawPcapReader:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         """impliment the iterator protocol on a set of packets in a pcap file"""
         pkt = self.read_packet()
         if pkt == None:
@@ -588,7 +588,7 @@ class PcapReader(RawPcapReader):
         return p
     def read_all(self,count=-1):
         res = RawPcapReader.read_all(self, count)
-        import plist
+        from . import plist
         return plist.PacketList(res,name = os.path.basename(self.filename))
     def recv(self, size=MTU):
         return self.read_packet(size)
@@ -635,7 +635,7 @@ class RawPcapWriter:
             if g.read(16):
                 return
             
-        self.f.write(struct.pack(self.endian+"IHHIIII", 0xa1b2c3d4L,
+        self.f.write(struct.pack(self.endian+"IHHIIII", 0xa1b2c3d4,
                                  2, 4, 0, 0, MTU, self.linktype))
         self.f.flush()
     
@@ -702,7 +702,7 @@ def import_hexcap():
     p = ""
     try:
         while 1:
-            l = raw_input().strip()
+            l = input().strip()
             try:
                 p += re_extract_hexcap.match(l).groups()[2]
             except:
@@ -741,14 +741,14 @@ def __make_table(yfmtfunc, fmtfunc, endline, list, fxyz, sortx=None, sorty=None,
     vyf = {}
     l = 0
     for e in list:
-        xx,yy,zz = map(str, fxyz(e))
+        xx,yy,zz = list(map(str, fxyz(e)))
         l = max(len(yy),l)
         vx[xx] = max(vx.get(xx,0), len(xx), len(zz))
         vy[yy] = None
         vz[(xx,yy)] = zz
 
-    vxk = vx.keys()
-    vyk = vy.keys()
+    vxk = list(vx.keys())
+    vyk = list(vy.keys())
     if sortx:
         vxk.sort(sortx)
     else:
@@ -772,31 +772,31 @@ def __make_table(yfmtfunc, fmtfunc, endline, list, fxyz, sortx=None, sorty=None,
 
 
     if seplinefunc:
-        sepline = seplinefunc(l, map(lambda x:vx[x],vxk))
-        print sepline
+        sepline = seplinefunc(l, [vx[x] for x in vxk])
+        print(sepline)
 
     fmt = yfmtfunc(l)
-    print fmt % "",
+    print(fmt % "", end=' ')
     for x in vxk:
         vxf[x] = fmtfunc(vx[x])
-        print vxf[x] % x,
-    print endline
+        print(vxf[x] % x, end=' ')
+    print(endline)
     if seplinefunc:
-        print sepline
+        print(sepline)
     for y in vyk:
-        print fmt % y,
+        print(fmt % y, end=' ')
         for x in vxk:
-            print vxf[x] % vz.get((x,y), "-"),
-        print endline
+            print(vxf[x] % vz.get((x,y), "-"), end=' ')
+        print(endline)
     if seplinefunc:
-        print sepline
+        print(sepline)
 
 def make_table(*args, **kargs):
     __make_table(lambda l:"%%-%is" % l, lambda l:"%%-%is" % l, "", *args, **kargs)
     
 def make_lined_table(*args, **kargs):
     __make_table(lambda l:"%%-%is |" % l, lambda l:"%%-%is |" % l, "",
-                 seplinefunc=lambda a,x:"+".join(map(lambda y:"-"*(y+2), [a-1]+x+[-2])),
+                 seplinefunc=lambda a,x:"+".join(["-"*(y+2) for y in [a-1]+x+[-2]]),
                  *args, **kargs)
 
 def make_tex_table(*args, **kargs):

@@ -25,10 +25,10 @@ if conf.use_pcap:
 
     try:
         import pcap
-    except ImportError,e:
+    except ImportError as e:
         try:
             import pcapy as pcap
-        except ImportError,e2:
+        except ImportError as e2:
             if conf.interactive:
                 log_loading.error("Unable to import pcap module: %s/%s" % (e,e2))
                 conf.use_pcap = False
@@ -58,8 +58,8 @@ if conf.use_pcap:
                     self.pcap.open_live(*args, **kargs)
                 def setfilter(self, filter):
                     self.pcap.setfilter(filter, 0, 0)
-                def next(self):
-                    c = self.pcap.next()
+                def __next__(self):
+                    c = next(self.pcap)
                     if c is None:
                         return
                     l,pkt,ts = c 
@@ -71,9 +71,9 @@ if conf.use_pcap:
             class _PcapWrapper_pcapy:
                 def __init__(self, *args, **kargs):
                     self.pcap = pcap.open_live(*args, **kargs)
-                def next(self):
+                def __next__(self):
                     try:
-                        c = self.pcap.next()
+                        c = next(self.pcap)
                     except pcap.PcapError:
                         return None
                     else:
@@ -129,7 +129,7 @@ if conf.use_pcap:
         
                 pkt = None
                 while pkt is None:
-                    pkt = self.ins.next()
+                    pkt = next(self.ins)
                     if pkt is not None:
                         ts,pkt = pkt
                     if scapy.arch.WINDOWS and pkt is None:
@@ -158,7 +158,7 @@ if conf.use_pcap:
 if conf.use_dnet:
     try:
         import dnet
-    except ImportError,e:
+    except ImportError as e:
         if conf.interactive:
             log_loading.error("Unable to import dnet module: %s" % e)
             conf.use_dnet = False
@@ -252,7 +252,7 @@ if conf.use_pcap and conf.use_dnet:
                 cls = conf.default_l2
                 warning("Unable to guess datalink type (interface=%s linktype=%i). Using %s" % (self.iface, ll, cls.name))
     
-            pkt = self.ins.next()
+            pkt = next(self.ins)
             if pkt is not None:
                 ts,pkt = pkt
             if pkt is None:
@@ -319,7 +319,7 @@ if conf.use_pcap and conf.use_dnet:
                 cls = conf.default_l2
                 warning("Unable to guess datalink type (interface=%s linktype=%i). Using %s" % (self.iface, ll, cls.name))
     
-            pkt = self.ins.next()
+            pkt = next(self.ins)
             if pkt is not None:
                 ts,pkt = pkt
             if pkt is None:

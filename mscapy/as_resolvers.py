@@ -9,7 +9,7 @@ Resolve Autonomous Systems (AS).
 
 
 import socket
-from config import conf
+from .config import conf
 
 class AS_resolver:
     server = None
@@ -88,7 +88,7 @@ class AS_resolver_cymru(AS_resolver):
         for l in r.splitlines()[1:]:
             if "|" not in l:
                 continue
-            asn,ip,desc = map(str.strip, l.split("|"))
+            asn,ip,desc = list(map(str.strip, l.split("|")))
             if asn == "NA":
                 continue
             asn = int(asn)

@@ -13,6 +13,7 @@ from scapy.fields import *
 from scapy.ansmachine import *
 from scapy.layers.inet import IP,UDP
 from scapy.sendrecv import sr
+from functools import reduce
 
 
 # see http://www.iana.org/assignments/ipsec-registry for details
@@ -99,7 +100,8 @@ del(val)
 
 class ISAKMPTransformSetField(StrLenField):
     islist=1
-    def type2num(self, (typ,val)):
+    def type2num(self, xxx_todo_changeme):
+        (typ,val) = xxx_todo_changeme
         type_val,enc_dict,tlv = ISAKMPTransformTypes.get(typ, (typ,{},0))
         val = enc_dict.get(val, val)
         s = ""
@@ -122,7 +124,7 @@ class ISAKMPTransformSetField(StrLenField):
     def i2m(self, pkt, i):
         if i is None:
             return ""
-        i = map(self.type2num, i)
+        i = list(map(self.type2num, i))
         return "".join(i)
     def m2i(self, pkt, m):
         # I try to ensure that we don't read off the end of our packet based
@@ -142,7 +144,7 @@ class ISAKMPTransformSetField(StrLenField):
                 if value_len+4 > len(m):
                     warning("Bad length for ISAKMP tranform type=%#6x" % trans_type)
                 value = m[4:4+value_len]
-                value = reduce(lambda x,y: (x<<8L)|y, struct.unpack("!%s" % ("B"*len(value),), value),0)
+                value = reduce(lambda x,y: (x<<8)|y, struct.unpack("!%s" % ("B"*len(value),), value),0)
             else:
                 trans_type &= 0x7fff
                 value_len=0

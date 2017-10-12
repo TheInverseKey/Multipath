@@ -16,8 +16,7 @@ from scapy.utils import Enum_metaclass, EnumElement
 class RandASN1Object(RandField):
     def __init__(self, objlist=None):
         if objlist is None:
-            objlist = map(lambda x:x._asn1_obj,
-                          filter(lambda x:hasattr(x,"_asn1_obj"), ASN1_Class_UNIVERSAL.__rdict__.values()))
+            objlist = [x._asn1_obj for x in [x for x in list(ASN1_Class_UNIVERSAL.__rdict__.values()) if hasattr(x,"_asn1_obj")]]
         self.objlist = objlist
         self.chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
     def _fix(self, n=0):
@@ -32,7 +31,7 @@ class RandASN1Object(RandField):
             return o("".join([random.choice(self.chars) for i in range(z)]))
         elif issubclass(o, ASN1_SEQUENCE) and (n < 10):
             z = int(random.expovariate(0.08)+1)
-            return o(map(lambda x:x._fix(n+1), [self.__class__(objlist=self.objlist)]*z))
+            return o([x._fix(n+1) for x in [self.__class__(objlist=self.objlist)]*z])
         return ASN1_INTEGER(int(random.gauss(0,1000)))
 
 
@@ -68,8 +67,7 @@ class ASN1Codec(EnumElement):
 class ASN1_Codecs_metaclass(Enum_metaclass):
     element_class = ASN1Codec
 
-class ASN1_Codecs:
-    __metaclass__ = ASN1_Codecs_metaclass
+class ASN1_Codecs(metaclass=ASN1_Codecs_metaclass):
     BER = 1
     DER = 2
     PER = 3
@@ -100,7 +98,7 @@ class ASN1Tag(EnumElement):
     def get_codec(self, codec):
         try:
             c = self._codec[codec]
-        except KeyError,msg:
+        except KeyError as msg:
             raise ASN1_Error("Codec %r not found for tag %r" % (codec, self))
         return c
 
@@ -108,12 +106,12 @@ class ASN1_Class_metaclass(Enum_metaclass):
     element_class = ASN1Tag
     def __new__(cls, name, bases, dct): # XXX factorise a bit with Enum_metaclass.__new__()
         for b in bases:
-            for k,v in b.__dict__.iteritems():
+            for k,v in b.__dict__.items():
                 if k not in dct and isinstance(v,ASN1Tag):
                     dct[k] = v.clone()
 
         rdict = {}
-        for k,v in dct.iteritems():
+        for k,v in dct.items():
             if type(v) is int:
                 v = ASN1Tag(k,v) 
                 dct[k] = v
@@ -123,14 +121,14 @@ class ASN1_Class_metaclass(Enum_metaclass):
         dct["__rdict__"] = rdict
 
         cls = type.__new__(cls, name, bases, dct)
-        for v in cls.__dict__.values():
+        for v in list(cls.__dict__.values()):
             if isinstance(v, ASN1Tag): 
                 v.context = cls # overwrite ASN1Tag contexts, even cloned ones
         return cls
             
 
-class ASN1_Class:
-    __metaclass__ = ASN1_Class_metaclass
+class ASN1_Class(metaclass=ASN1_Class_metaclass):
+    pass
 
 class ASN1_Class_UNIVERSAL(ASN1_Class):
     name = "UNIVERSAL"
@@ -182,8 +180,7 @@ class ASN1_Object_metaclass(type):
         return c
 
 
-class ASN1_Object:
-    __metaclass__ = ASN1_Object_metaclass
+class ASN1_Object(metaclass=ASN1_Object_metaclass):
     tag = ASN1_Class_UNIVERSAL.ANY
     def __init__(self, val):
         self.val = val
@@ -196,7 +193,7 @@ class ASN1_Object:
     def strshow(self, lvl=0):
         return ("  "*lvl)+repr(self)+"\n"
     def show(self, lvl=0):
-        print self.strshow(lvl)
+        print(self.strshow(lvl))
     def __eq__(self, other):
         return self.val == other
     def __cmp__(self, other):

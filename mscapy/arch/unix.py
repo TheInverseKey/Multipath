@@ -17,7 +17,7 @@ import scapy.arch
 
 scapy.config.conf.use_pcap = 1
 scapy.config.conf.use_dnet = 1
-from pcapdnet import *
+from .pcapdnet import *
 
 
     
@@ -68,8 +68,8 @@ def read_routes():
         if flg.find("Lc") >= 0:
             continue                
         if dest == "default":
-            dest = 0L
-            netmask = 0L
+            dest = 0
+            netmask = 0
         else:
             if scapy.arch.SOLARIS:
                 netmask = scapy.utils.atol(mask)
@@ -127,7 +127,7 @@ def in6_getifaddr():
     for int in i:
         ifname = int['name']
         v6 = []
-        if int.has_key('alias_addrs'):
+        if 'alias_addrs' in int:
             v6 = int['alias_addrs']
         for a in v6:
             if a.type != dnet.ADDR_TYPE_IP6:
@@ -165,7 +165,7 @@ def read_routes6():
             dev = lspl[5+mtu_present+prio_present]
         else:       # FREEBSD or DARWIN 
             d,nh,fl,dev = l.split()[:4]
-        if filter(lambda x: x[2] == dev, lifaddr) == []:
+        if [x for x in lifaddr if x[2] == dev] == []:
             continue
         if 'L' in fl: # drop MAC addresses
             continue
@@ -189,7 +189,7 @@ def read_routes6():
             cset = ['::1']
             nh = '::'
         else:
-            devaddrs = filter(lambda x: x[2] == dev, lifaddr)
+            devaddrs = [x for x in lifaddr if x[2] == dev]
             cset = scapy.utils6.construct_source_candidate_set(d, dp, devaddrs, scapy.arch.LOOPBACK_NAME)
 
         if len(cset) != 0:

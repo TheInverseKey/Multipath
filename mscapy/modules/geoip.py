@@ -43,9 +43,9 @@ class CountryLocKnowledgeBase(KnowledgeBase):
             l = l.strip().split(",")
             if len(l) != 3:
                 continue
-            c,lat,long = l
+            c,lat,int = l
             
-            self.base[c] = (float(long),float(lat))
+            self.base[c] = (float(int),float(lat))
         f.close()
             
         
@@ -53,8 +53,8 @@ class CountryLocKnowledgeBase(KnowledgeBase):
 @conf.commands.register
 def locate_ip(ip):
     """Get geographic coordinates from IP using geoip database"""
-    ip=map(int,ip.split("."))
-    ip = ip[3]+(ip[2]<<8L)+(ip[1]<<16L)+(ip[0]<<24L)
+    ip=list(map(int,ip.split(".")))
+    ip = ip[3]+(ip[2]<<8)+(ip[1]<<16)+(ip[0]<<24)
 
     cloc = country_loc_kdb.get_base()
     db = IP_country_kdb.get_base()

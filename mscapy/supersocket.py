@@ -8,8 +8,8 @@ SuperSocket.
 """
 
 import socket,time
-from config import conf
-from data import *
+from .config import conf
+from .data import *
 from scapy.error import warning
 
 class _SuperSocket_metaclass(type):
@@ -20,8 +20,7 @@ class _SuperSocket_metaclass(type):
             return "<%s>" % self.__name__
 
 
-class SuperSocket:
-    __metaclass__ = _SuperSocket_metaclass
+class SuperSocket(metaclass=_SuperSocket_metaclass):
     desc = None
     closed=0
     def __init__(self, family=socket.AF_INET,type=socket.SOCK_STREAM, proto=0):
@@ -91,7 +90,7 @@ class L3RawSocket(SuperSocket):
             pkt = pkt.payload
             
         if pkt is not None:
-            from arch import get_last_packet_timestamp
+            from .arch import get_last_packet_timestamp
             pkt.time = get_last_packet_timestamp(self.ins)
         return pkt
     def send(self, x):
@@ -99,7 +98,7 @@ class L3RawSocket(SuperSocket):
             sx = str(x)
             x.sent_time = time.time()
             self.outs.sendto(sx,(x.dst,0))
-        except socket.error,msg:
+        except socket.error as msg:
             log_runtime.error(msg)
 
 class SimpleSocket(SuperSocket):
@@ -137,4 +136,4 @@ class StreamSocket(SimpleSocket):
 if conf.L3socket is None:
     conf.L3socket = L3RawSocket
 
-import sendrecv
+from . import sendrecv

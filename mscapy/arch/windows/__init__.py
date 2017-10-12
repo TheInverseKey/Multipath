@@ -17,6 +17,7 @@ import scapy.plist as plist
 from scapy.sendrecv import debug, srp1
 from scapy.layers.l2 import Ether, ARP
 from scapy.data import MTU, ETHER_BROADCAST, ETH_P_ARP
+from functools import reduce
 
 conf.use_pcap = 1
 conf.use_dnet = 1
@@ -71,7 +72,7 @@ conf.prog = WinProgPath()
 
 
 
-import _winreg
+import winreg
 
 
     
@@ -121,16 +122,16 @@ class NetworkInterface(object):
                     uuid = win_name[win_name.index("{"):win_name.index("}")+1]
                     keyname = r"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%s" % uuid
                     try:
-                        key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, keyname)
+                        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, keyname)
                     except WindowsError:
                         log_loading.debug("Couldn't open 'HKEY_LOCAL_MACHINE\\%s' (for guessed pcap iface name '%s')." % (keyname, guess))
                         continue
                     try:    
-                        fixed_ip = _winreg.QueryValueEx(key, "IPAddress")[0][0].encode("utf-8")
+                        fixed_ip = winreg.QueryValueEx(key, "IPAddress")[0][0].encode("utf-8")
                     except (WindowsError, UnicodeDecodeError, IndexError):
                         fixed_ip = None
                     try:
-                        dhcp_ip = _winreg.QueryValueEx(key, "DhcpIPAddress")[0].encode("utf-8")
+                        dhcp_ip = winreg.QueryValueEx(key, "DhcpIPAddress")[0].encode("utf-8")
                     except (WindowsError, UnicodeDecodeError, IndexError):
                         dhcp_ip = None
                     # "0.0.0.0" or None means the value is not set (at least not correctly).
@@ -195,20 +196,20 @@ class NetworkInterfaceDict(IterableUserDict):
         
         This mapping is necessary because pypcap numbers the devices differently."""
         
-        for devname, iface in self.items():
+        for devname, iface in list(self.items()):
             if iface.pcap_name == pcap_name:
                 return iface.name
         raise ValueError("Unknown pypcap network interface %r" % pcap_name)
     
     def show(self, resolve_mac=True):
         """Print list of available network interfaces in human readable form"""
-        print "%s  %s  %s" % ("IFACE".ljust(5), "IP".ljust(15), "MAC")
+        print("%s  %s  %s" % ("IFACE".ljust(5), "IP".ljust(15), "MAC"))
         for iface_name in sorted(self.data.keys()):
             dev = self.data[iface_name]
             mac = str(dev.mac)
             if resolve_mac:
                 mac = conf.manufdb._resolve_MAC(mac)
-            print "%s  %s  %s" % (str(dev.name).ljust(5), str(dev.ip).ljust(15), mac)     
+            print("%s  %s  %s" % (str(dev.name).ljust(5), str(dev.ip).ljust(15), mac))     
             
 ifaces = NetworkInterfaceDict()
 ifaces.load_from_dnet()
@@ -258,7 +259,7 @@ def read_routes():
             except OSError:
                 log_loading.warning("Building Scapy's routing table: Couldn't get outgoing interface for destination %s" % dest)
                 continue               
-            if not intf.has_key("addr"):
+            if "addr" not in intf:
                 break
             addr = str(intf["addr"])
             addr = addr.split("/")[0]
@@ -281,8 +282,8 @@ def read_routes6():
 def getmacbyip(ip, chainCC=0):
     """Return MAC address corresponding to a given IP address"""
     if isinstance(ip,Net):
-        ip = iter(ip).next()
-    tmp = map(ord, inet_aton(ip))
+        ip = next(iter(ip))
+    tmp = list(map(ord, inet_aton(ip)))
     if (tmp[0] & 0xf0) == 0xe0: # mcast @
         return "01:00:5e:%.2x:%.2x:%.2x" % (tmp[1]&0x7f,tmp[2],tmp[3])
     iff,a,gw = conf.route.route(ip)
@@ -369,13 +370,13 @@ def sndrcv(pks, pkt, timeout = 2, inter = 0, verbose=None, chainCC=0, retry=0, m
                     try:
                         i = 0
                         if verbose:
-                            print "Begin emission:"
+                            print("Begin emission:")
                         for p in tobesent:
                             pks.send(p)
                             i += 1
                             time.sleep(inter)
                         if verbose:
-                            print "Finished to send %i packets." % i
+                            print("Finished to send %i packets." % i)
                     except SystemExit:
                         pass
                     except KeyboardInterrupt:
@@ -442,9 +443,9 @@ def sndrcv(pks, pkt, timeout = 2, inter = 0, verbose=None, chainCC=0, retry=0, m
         finally:
             pass
 
-        remain = reduce(list.__add__, hsent.values(), [])
+        remain = reduce(list.__add__, list(hsent.values()), [])
         if multi:
-            remain = filter(lambda p: not hasattr(p, '_answered'), remain);
+            remain = [p for p in remain if not hasattr(p, '_answered')];
             
         if autostop and len(remain) > 0 and len(remain) != len(tobesent):
             retry = autostop
@@ -465,7 +466,7 @@ def sndrcv(pks, pkt, timeout = 2, inter = 0, verbose=None, chainCC=0, retry=0, m
                 del(s._answered)
     
     if verbose:
-        print "\nReceived %i packets, got %i answers, remaining %i packets" % (nbrecv+len(ans), len(ans), notans)
+        print("\nReceived %i packets, got %i answers, remaining %i packets" % (nbrecv+len(ans), len(ans), notans))
     return plist.SndRcvList(ans),plist.PacketList(remain,"Unanswered")
 
 
@@ -522,7 +523,7 @@ L2socket: use the provided L2socket
             if prn:
                 r = prn(p)
                 if r is not None:
-                    print r
+                    print(r)
             if count > 0 and c >= count:
                 break
         except KeyboardInterrupt:

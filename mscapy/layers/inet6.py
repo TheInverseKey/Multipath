@@ -143,16 +143,16 @@ class Net6(Gen): # syntax ex. fec0::/126
         def m8(i):
             if i % 8 == 0:
                 return i
-        tuple = filter(lambda x: m8(x), xrange(8, 129))
+        tuple = [x for x in range(8, 129) if m8(x)]
 
         a = in6_and(self.net, self.mask)
-        tmp = map(lambda x:  x, struct.unpack('16B', a))
+        tmp = [x for x in struct.unpack('16B', a)]
    
         def parse_digit(a, netmask):
             netmask = min(8,max(netmask,0))
-            a = (int(a) & (0xffL<<netmask),(int(a) | (0xffL>>(8-netmask)))+1)
+            a = (int(a) & (0xff<<netmask),(int(a) | (0xff>>(8-netmask)))+1)
             return a
-        self.parsed = map(lambda x,y: parse_digit(x,y), tmp, map(lambda x,nm=self.plen: x-nm, tuple))
+        self.parsed = list(map(lambda x,y: parse_digit(x,y), tmp, list(map(lambda x,nm=self.plen: x-nm, tuple))))
 
         def rec(n, l): 
             if n and  n % 2 == 0:
@@ -163,7 +163,7 @@ class Net6(Gen): # syntax ex. fec0::/126
                 return l
             else:
                 ll = []
-                for i in xrange(*self.parsed[n]):
+                for i in range(*self.parsed[n]):
                     for y in l:
                         ll += [y+sep+'%.2x'%i]
                 return rec(n+1, ll)
@@ -194,7 +194,7 @@ class IP6Field(Field):
             except socket.error:
                 x = Net6(x)
         elif type(x) is list:
-            x = map(Net6, x)
+            x = list(map(Net6, x))
         return x
     def i2m(self, pkt, x):
         return inet_pton(socket.AF_INET6, x)
@@ -229,7 +229,7 @@ class SourceIP6Field(IP6Field):
         if x is None:
             dst=getattr(pkt,self.dstname)
             if isinstance(dst,Gen):
-                r = map(conf.route6.route, dst)
+                r = list(map(conf.route6.route, dst))
                 r.sort()
                 if r[0] == r[-1]:
                     x=r[0][1]
@@ -352,7 +352,7 @@ class IPv6(_IPv6GuessPayload, Packet, IPTools):
     def route(self):
         dst = self.dst
         if isinstance(dst,Gen):
-            dst = iter(dst).next()
+            dst = next(iter(dst))
         return conf.route6.route(dst)
 
     def mysummary(self):
@@ -770,7 +770,7 @@ class _HopByHopOptionsField(PacketListField):
                 c -= 1
             o = ord(x[0]) # Option type
             cls = self.cls
-            if _hbhoptcls.has_key(o):
+            if o in _hbhoptcls:
                 cls = _hbhoptcls[o]
             try:
                 op = cls(x)
@@ -898,14 +898,14 @@ def defragment6(pktlist):
     Crap is dropped. What lacks is completed by 'X' characters.
     """
     
-    l = filter(lambda x: IPv6ExtHdrFragment in x, pktlist) # remove non fragments
+    l = [x for x in pktlist if IPv6ExtHdrFragment in x] # remove non fragments
     if not l:
         return []
 
     id = l[0][IPv6ExtHdrFragment].id 
 
     llen = len(l)
-    l = filter(lambda x: x[IPv6ExtHdrFragment].id == id, l)
+    l = [x for x in l if x[IPv6ExtHdrFragment].id == id]
     if len(l) != llen:
         warning("defragment6: some fragmented packets have been removed from list")
     llen = len(l)
@@ -1446,8 +1446,8 @@ class ICMPv6NDOptPrefixInfo(_ICMPv6NDGuessPayload, Packet):
                     BitField("A",1,1),
                     BitField("R",0,1),
                     BitField("res1",0,5),
-                    XIntField("validlifetime",0xffffffffL),
-                    XIntField("preferredlifetime",0xffffffffL),
+                    XIntField("validlifetime",0xffffffff),
+                    XIntField("preferredlifetime",0xffffffff),
                     XIntField("res2",0x00000000),
                     IP6Field("prefix","::") ]
     def mysummary(self):                        
@@ -1859,7 +1859,7 @@ def names2dnsrepr(x):
         termin = "\x00"
         if n.count('.') == 0: # single-component gets one more
             termin += '\x00' 
-        n = "".join(map(lambda y: chr(len(y))+y, n.split("."))) + termin
+        n = "".join([chr(len(y))+y for y in n.split(".")]) + termin
         res.append(n)
     return "".join(res)
 
@@ -2089,7 +2089,7 @@ class NIReplyDataField(StrField):
                     return (0, x)
                 return x
 
-            return (qtype, map(addttl, x))
+            return (qtype, list(map(addttl, x)))
 
         return (qtype, x)
 
@@ -2102,9 +2102,9 @@ class NIReplyDataField(StrField):
             ttl,dnsstr = tmp
             return s+ struct.pack("!I", ttl) + dnsstr
         elif t == 3:
-            return s + "".join(map(lambda (x,y): struct.pack("!I", x)+inet_pton(socket.AF_INET6, y), tmp))
+            return s + "".join([struct.pack("!I", x_y1[0])+inet_pton(socket.AF_INET6, x_y1[1]) for x_y1 in tmp])
         elif t == 4:
-            return s + "".join(map(lambda (x,y): struct.pack("!I", x)+inet_pton(socket.AF_INET, y), tmp))
+            return s + "".join([struct.pack("!I", x_y2[0])+inet_pton(socket.AF_INET, x_y2[1]) for x_y2 in tmp])
         else:
             return s + tmp
                 
@@ -2157,7 +2157,7 @@ class NIReplyDataField(StrField):
                 l = dnsrepr2names(l)
                 return "ttl:%d %s" % (ttl, ", ".join(l))
             elif t == 3 or t == 4:
-                return "[ %s ]" % (", ".join(map(lambda (x,y): "(%d, %s)" % (x, y), val)))
+                return "[ %s ]" % (", ".join(["(%d, %s)" % (x_y[0], x_y[1]) for x_y in val]))
             return repr(val)
         return repr(x) # XXX should not happen
 
@@ -2580,7 +2580,7 @@ class _MobilityOptionsField(PacketListField):
         while x:
             o = ord(x[0]) # Option type
             cls = self.cls
-            if moboptcls.has_key(o):
+            if o in moboptcls:
                 cls = moboptcls[o]
             try:
                 op = cls(x)
@@ -2819,9 +2819,9 @@ class  AS_resolver6(AS_resolver_riswhois):
 
 class TracerouteResult6(TracerouteResult):
     def show(self):
-        return self.make_table(lambda (s,r): (s.sprintf("%-42s,IPv6.dst%:{TCP:tcp%TCP.dport%}{UDP:udp%UDP.dport%}{ICMPv6EchoRequest:IER}"), # TODO: ICMPv6 !
-                                              s.hlim,
-                                              r.sprintf("%-42s,IPv6.src% {TCP:%TCP.flags%}"+
+        return self.make_table(lambda s_r: (s_r[0].sprintf("%-42s,IPv6.dst%:{TCP:tcp%TCP.dport%}{UDP:udp%UDP.dport%}{ICMPv6EchoRequest:IER}"), # TODO: ICMPv6 !
+                                              s_r[0].hlim,
+                                              s_r[1].sprintf("%-42s,IPv6.src% {TCP:%TCP.flags%}"+
                                                         "{ICMPv6DestUnreach:%ir,type%}{ICMPv6PacketTooBig:%ir,type%}"+
                                                         "{ICMPv6TimeExceeded:%ir,type%}{ICMPv6ParamProblem:%ir,type%}"+
                                                         "{ICMPv6EchoReply:%ir,type%}")))
@@ -2843,12 +2843,12 @@ class TracerouteResult6(TracerouteResult):
 
             trace[d][s[IPv6].hlim] = r[IPv6].src, t
 
-        for k in trace.values():
-            m = filter(lambda x: k[x][1], k.keys())
+        for k in list(trace.values()):
+            m = [x for x in list(k.keys()) if k[x][1]]
             if not m:
                 continue
             m = min(m)
-            for l in k.keys():
+            for l in list(k.keys()):
                 if l > m:
                     del(k[l])
 

@@ -10,6 +10,7 @@ Cryptographic certificates.
 import os, sys, math, socket, struct, sha, hmac, string, time
 import random, popen2, tempfile
 from scapy.utils import strxor
+from functools import reduce
 try:
     HAS_HASHLIB=True
     import hashlib
@@ -31,20 +32,20 @@ MAX_CRL_SIZE=10*1024*1024   # some are that big
 #####################################################################
 
 def warning(m):
-    print "WARNING: %s" % m
+    print("WARNING: %s" % m)
 
 def randstring(l):
     """
     Returns a random string of length l (l >= 0)
     """
-    tmp = map(lambda x: struct.pack("B", random.randrange(0, 256, 1)), [""]*l)
+    tmp = [struct.pack("B", random.randrange(0, 256, 1)) for x in [""]*l]
     return "".join(tmp)
 
 def zerofree_randstring(l):
     """
     Returns a random string of length l (l >= 0) without zero in it. 
     """
-    tmp = map(lambda x: struct.pack("B", random.randrange(1, 256, 1)), [""]*l)
+    tmp = [struct.pack("B", random.randrange(1, 256, 1)) for x in [""]*l]
     return "".join(tmp)
 
 def strand(s1, s2):
@@ -153,7 +154,7 @@ def pkcs_mgf1(mgfSeed, maskLen, h):
     """
 
     # steps are those of Appendix B.2.1
-    if not _hashFuncParams.has_key(h):
+    if h not in _hashFuncParams:
         warning("pkcs_mgf1: invalid hash (%s) provided")
         return None
     hLen = _hashFuncParams[h][0]
@@ -210,7 +211,7 @@ def pkcs_emsa_pss_encode(M, emBits, h, mgf, sLen):
     rem = 8*emLen - emBits - 8*l # additionnal bits
     andMask = l*'\x00'
     if rem:
-        j = chr(reduce(lambda x,y: x+y, map(lambda x: 1<<x, range(8-rem))))
+        j = chr(reduce(lambda x,y: x+y, [1<<x for x in range(8-rem)]))
         andMask += j
         l += 1
     maskedDB = strand(maskedDB[:l], andMask) + maskedDB[l:]
@@ -252,7 +253,7 @@ def pkcs_emsa_pss_verify(M, EM, emBits, h, mgf, sLen):
     rem = 8*emLen - emBits - 8*l # additionnal bits
     andMask = l*'\xff'
     if rem:
-        val = reduce(lambda x,y: x+y, map(lambda x: 1<<x, range(8-rem)))
+        val = reduce(lambda x,y: x+y, [1<<x for x in range(8-rem)])
         j = chr(~val & 0xff)
         andMask += j
         l += 1
@@ -264,7 +265,7 @@ def pkcs_emsa_pss_verify(M, EM, emBits, h, mgf, sLen):
     rem = 8*emLen - emBits - 8*l # additionnal bits
     andMask = l*'\x00'
     if rem:
-        j = chr(reduce(lambda x,y: x+y, map(lambda x: 1<<x, range(8-rem))))
+        j = chr(reduce(lambda x,y: x+y, [1<<x for x in range(8-rem)]))
         andMask += j
         l += 1
     DB = strand(DB[:l], andMask) + DB[l:]
@@ -440,8 +441,8 @@ class _EncryptAndVerify:
 
         n = self.modulus
         if type(m) is int:
-            m = long(m)
-        if type(m) is not long or m > n-1:
+            m = int(m)
+        if type(m) is not int or m > n-1:
             warning("Key._rsaep() expects a long between 0 and n-1")
             return None
 
@@ -514,7 +515,7 @@ class _EncryptAndVerify:
         mLen = len(M)
         if h is None:
             h = "sha1"
-        if not _hashFuncParams.has_key(h):
+        if h not in _hashFuncParams:
             warning("Key._rsaes_oaep_encrypt(): unknown hash function %s.", h)
             return None
         hLen = _hashFuncParams[h][0]
@@ -635,7 +636,7 @@ class _EncryptAndVerify:
         # Set default parameters if not provided
         if h is None: # By default, sha1
             h = "sha1"
-        if not _hashFuncParams.has_key(h):
+        if h not in _hashFuncParams:
             warning("Key._rsassa_pss_verify(): unknown hash function "
                     "provided (%s)" % h)
             return False
@@ -787,8 +788,8 @@ class _DecryptAndSignMethods(OSSLHelper):
 
         n = self.modulus
         if type(c) is int:
-            c = long(c)        
-        if type(c) is not long or c > n-1:
+            c = int(c)        
+        if type(c) is not int or c > n-1:
             warning("Key._rsaep() expects a long between 0 and n-1")
             return None
 
@@ -883,7 +884,7 @@ class _DecryptAndSignMethods(OSSLHelper):
                                                     # 1.a) is not done
         if h is None:
             h = "sha1"
-        if not _hashFuncParams.has_key(h):
+        if h not in _hashFuncParams:
             warning("Key._rsaes_oaep_decrypt(): unknown hash function %s.", h)
             return None
         hLen = _hashFuncParams[h][0]
@@ -1036,7 +1037,7 @@ class _DecryptAndSignMethods(OSSLHelper):
         # Set default parameters if not provided
         if h is None: # By default, sha1
             h = "sha1"
-        if not _hashFuncParams.has_key(h):
+        if h not in _hashFuncParams:
             warning("Key._rsassa_pss_sign(): unknown hash function "
                     "provided (%s)" % h)
             return None
@@ -1294,7 +1295,7 @@ class PubKey(OSSLHelper, _EncryptAndVerify):
             v, rem = v.split(' bit):', 1)
             self.modulusLen = int(v)
             rem = rem.replace('\n','').replace(' ','').replace(':','')
-            self.modulus = long(rem, 16)
+            self.modulus = int(rem, 16)
         if self.modulus is None:
             raise Exception(error_msg)
         
@@ -1302,7 +1303,7 @@ class PubKey(OSSLHelper, _EncryptAndVerify):
         v = fields_dict["Exponent:"]
         self.pubExp = None
         if v:
-            self.pubExp = long(v.split('(', 1)[0])
+            self.pubExp = int(v.split('(', 1)[0])
         if self.pubExp is None:
             raise Exception(error_msg)
 
@@ -1459,7 +1460,7 @@ class Key(OSSLHelper, _DecryptAndSignMethods, _EncryptAndVerify):
         v = fields_dict["publicExponent:"]
         self.pubExp = None
         if v:
-            self.pubExp = long(v.split('(', 1)[0])
+            self.pubExp = int(v.split('(', 1)[0])
         if self.pubExp is None:
             raise Exception(error_msg)
 
@@ -1469,7 +1470,7 @@ class Key(OSSLHelper, _DecryptAndSignMethods, _EncryptAndVerify):
             v = fields_dict[k]
             if v:
                 s = v.replace('\n', '').replace(' ', '').replace(':', '')
-                tmp[k] = long(s, 16)
+                tmp[k] = int(s, 16)
             else:
                 raise Exception(error_msg)
 
@@ -1772,7 +1773,7 @@ class Cert(OSSLHelper, _EncryptAndVerify):
             self.modulusLen = int(v)
             t = t.replace(' ', '').replace('\n', ''). replace(':', '')
             self.modulus_hexdump = t
-            self.modulus = long(t, 16)
+            self.modulus = int(t, 16)
         if self.modulus is None:
             raise Exception(error_msg)
 
@@ -1781,7 +1782,7 @@ class Cert(OSSLHelper, _EncryptAndVerify):
         self.exponent = None
         if v:
             v = v.split('(',1)[0]
-            self.exponent = long(v)
+            self.exponent = int(v)
         if self.exponent is None:
             raise Exception(error_msg)
 
@@ -1839,15 +1840,15 @@ class Cert(OSSLHelper, _EncryptAndVerify):
                           "Encipher Only": "encipherOnly",
                           "Decipher Only": "decipherOnly"}
             v = v.split('\n',2)[1]
-            l = map(lambda x: x.strip(), v.split(','))
+            l = [x.strip() for x in v.split(',')]
             while l:
                 c = l.pop()
-                if ku_mapping.has_key(c):
+                if c in ku_mapping:
                     self.keyUsage.append(ku_mapping[c])
                 else:
                     self.keyUsage.append(c) # Add it anyway
-                    print "Found unknown X509v3 Key Usage: '%s'" % c
-                    print "Report it to arno (at) natisbad.org for addition"
+                    print("Found unknown X509v3 Key Usage: '%s'" % c)
+                    print("Report it to arno (at) natisbad.org for addition")
 
         # X509v3 Extended Key Usage
         self.extKeyUsage = []
@@ -1869,15 +1870,15 @@ class Cert(OSSLHelper, _EncryptAndVerify):
                            "IPSec Tunnel": "iPsecTunnel",
                            "IPSec User": "iPsecUser"}
             v = v.split('\n',2)[1]
-            l = map(lambda x: x.strip(), v.split(','))
+            l = [x.strip() for x in v.split(',')]
             while l:
                 c = l.pop()
-                if eku_mapping.has_key(c):
+                if c in eku_mapping:
                     self.extKeyUsage.append(eku_mapping[c])
                 else:
                     self.extKeyUsage.append(c) # Add it anyway
-                    print "Found unknown X509v3 Extended Key Usage: '%s'" % c
-                    print "Report it to arno (at) natisbad.org for addition"
+                    print("Found unknown X509v3 Extended Key Usage: '%s'" % c)
+                    print("Report it to arno (at) natisbad.org for addition")
 
         # CRL Distribution points
         self.cRLDistributionPoints = []
@@ -1885,7 +1886,7 @@ class Cert(OSSLHelper, _EncryptAndVerify):
         if v:
             v = v.split("\n\n", 1)[0]
             v = v.split("URI:")[1:]
-            self.CRLDistributionPoints = map(lambda x: x.strip(), v)
+            self.CRLDistributionPoints = [x.strip() for x in v]
             
         # Authority Information Access: list of tuples ("method", "location")
         self.authorityInfoAccess = []
@@ -1894,7 +1895,7 @@ class Cert(OSSLHelper, _EncryptAndVerify):
             v = v.split("\n\n", 1)[0]
             v = v.split("\n")[1:]
             for e in v:
-                method, location = map(lambda x: x.strip(), e.split(" - ", 1))
+                method, location = [x.strip() for x in e.split(" - ", 1)]
                 self.authorityInfoAccess.append((method, location))
 
         # signature field
@@ -1903,7 +1904,7 @@ class Cert(OSSLHelper, _EncryptAndVerify):
         if v:
             v = v.split('\n',1)[1]
             v = v.replace(' ', '').replace('\n', '')
-            self.sig = "".join(map(lambda x: chr(int(x, 16)), v.split(':')))
+            self.sig = "".join([chr(int(x, 16)) for x in v.split(':')])
             self.sigLen = len(self.sig)
         if self.sig is None:
             raise Exception(error_msg)
@@ -1934,7 +1935,7 @@ class Cert(OSSLHelper, _EncryptAndVerify):
         unenc = unenc[pos+1:]
 
         found = None
-        for k in _hashFuncParams.keys():
+        for k in list(_hashFuncParams.keys()):
             if self.sigAlg.startswith(k):
                 found = k
                 break
@@ -1970,7 +1971,7 @@ class Cert(OSSLHelper, _EncryptAndVerify):
         res = [self]
         cur = self
         while not cur.isSelfSigned():
-            if d.has_key(cur.issuer):
+            if cur.issuer in d:
                 possible_issuer = d[cur.issuer]
                 if cur.isIssuerCert(possible_issuer):
                     res.append(possible_issuer)
@@ -2057,11 +2058,11 @@ class Cert(OSSLHelper, _EncryptAndVerify):
 
     # Print main informations stored in certificate
     def show(self):
-        print "Serial: %s" % self.serial
-        print "Issuer: " + self.issuer
-        print "Subject: " + self.subject
-        print "Validity: %s to %s" % (self.notBefore_str_simple,
-                                      self.notAfter_str_simple)
+        print("Serial: %s" % self.serial)
+        print("Issuer: " + self.issuer)
+        print("Subject: " + self.subject)
+        print("Validity: %s to %s" % (self.notBefore_str_simple,
+                                      self.notAfter_str_simple))
 
     def __repr__(self):
         return "[X.509 Cert. Subject:%s, Issuer:%s]" % (self.subject, self.issuer)
@@ -2161,9 +2162,9 @@ class Cert(OSSLHelper, _EncryptAndVerify):
             if (self.authorityKeyID is not None and 
                 c.authorityKeyID is not None and
                 self.authorityKeyID == c.authorityKeyID):
-                return self.serial in map(lambda x: x[0], c.revoked_cert_serials)
+                return self.serial in [x[0] for x in c.revoked_cert_serials]
             elif (self.issuer == c.issuer):
-                return self.serial in map(lambda x: x[0], c.revoked_cert_serials)
+                return self.serial in [x[0] for x in c.revoked_cert_serials]
         return False
 
 def print_chain(l):
@@ -2185,7 +2186,7 @@ def print_chain(l):
             s += "\n"
         i += 2
         llen -= 1
-    print s
+    print(s)
 
 # import popen2
 # a=popen2.Popen3("openssl crl -text -inform DER -noout ", capturestderr=True)
@@ -2444,7 +2445,7 @@ class CRL(OSSLHelper):
         if v:
             v = v.split('\n',1)[1]
             v = v.replace(' ', '').replace('\n', '')
-            self.sig = "".join(map(lambda x: chr(int(x, 16)), v.split(':')))
+            self.sig = "".join([chr(int(x, 16)) for x in v.split(':')])
             self.sigLen = len(self.sig)
         if self.sig is None:
             raise Exception(error_msg)
@@ -2454,11 +2455,11 @@ class CRL(OSSLHelper):
         
     # Print main informations stored in CRL
     def show(self):
-        print "Version: %d" % self.version
-        print "sigAlg: " + self.sigAlg
-        print "Issuer: " + self.issuer
-        print "lastUpdate: %s" % self.lastUpdate_str_simple
-        print "nextUpdate: %s" % self.nextUpdate_str_simple
+        print("Version: %d" % self.version)
+        print("sigAlg: " + self.sigAlg)
+        print("Issuer: " + self.issuer)
+        print("lastUpdate: %s" % self.lastUpdate_str_simple)
+        print("nextUpdate: %s" % self.nextUpdate_str_simple)
 
     def verify(self, anchors):
         """

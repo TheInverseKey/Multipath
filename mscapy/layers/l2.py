@@ -49,8 +49,8 @@ conf.netcache.new_cache("arp_cache", 120) # cache entries expire after 120s
 def getmacbyip(ip, chainCC=0):
     """Return MAC address corresponding to a given IP address"""
     if isinstance(ip,Net):
-        ip = iter(ip).next()
-    tmp = map(ord, inet_aton(ip))
+        ip = next(iter(ip))
+    tmp = list(map(ord, inet_aton(ip)))
     if (tmp[0] & 0xf0) == 0xe0: # mcast @
         return "01:00:5e:%.2x:%.2x:%.2x" % (tmp[1]&0x7f,tmp[2],tmp[3])
     iff,a,gw = conf.route.route(ip)
@@ -338,7 +338,7 @@ class ARP(Packet):
     def route(self):
         dst = self.pdst
         if isinstance(dst,Gen):
-            dst = iter(dst).next()
+            dst = next(iter(dst))
         return conf.route.route(dst)
     def extract_padding(self, s):
         return "",s
@@ -455,7 +455,7 @@ class ARPingResult(SndRcvList):
 
     def show(self):
         for s,r in self.res:
-            print r.sprintf("%19s,Ether.src% %ARP.psrc%")
+            print(r.sprintf("%19s,Ether.src% %ARP.psrc%"))
 
 
 
@@ -534,7 +534,7 @@ class ARP_am(AnsweringMachine):
 @conf.commands.register
 def etherleak(target, **kargs):
     """Exploit Etherleak flaw"""
-    return srpflood(Ether()/ARP(pdst=target), prn=lambda (s,r): Padding in r and hexstr(r[Padding].load),
+    return srpflood(Ether()/ARP(pdst=target), prn=lambda s_r: Padding in s_r[1] and hexstr(s_r[1][Padding].load),
                     filter="arp", **kargs)
 
 

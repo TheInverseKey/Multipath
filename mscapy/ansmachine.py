@@ -11,9 +11,9 @@ Answering machines.
 ## Answering machines ##
 ########################
 
-from sendrecv import send,sendp,sniff
-from config import conf
-from error import log_interactive
+from .sendrecv import send,sendp,sniff
+from .config import conf
+from .error import log_interactive
 
 class ReferenceAM(type):
     def __new__(cls, name, bases, dct):
@@ -23,8 +23,7 @@ class ReferenceAM(type):
         return o
 
 
-class AnsweringMachine(object):
-    __metaclass__ = ReferenceAM
+class AnsweringMachine(object, metaclass=ReferenceAM):
     function_name = ""
     filter = None
     sniff_options = { "store":0 }
@@ -53,7 +52,7 @@ class AnsweringMachine(object):
         for d in [self.optam2, self.optam1]:
             if attr in d:
                 return d[attr]
-        raise AttributeError,attr
+        raise AttributeError(attr)
                 
     def __setattr__(self, attr, val):
         mode = self.__dict__.get("mode",0)
@@ -68,7 +67,7 @@ class AnsweringMachine(object):
     def parse_all_options(self, mode, kargs):
         sniffopt = {}
         sendopt = {}
-        for k in kargs.keys():            
+        for k in list(kargs.keys()):            
             if k in self.sniff_options_list:
                 sniffopt[k] = kargs[k]
             if k in self.send_options_list:
@@ -99,7 +98,7 @@ class AnsweringMachine(object):
         self.send_function(reply, **self.optsend)
 
     def print_reply(self, req, reply):
-        print "%s ==> %s" % (req.summary(),reply.summary())
+        print("%s ==> %s" % (req.summary(),reply.summary()))
 
     def reply(self, pkt):
         if not self.is_request(pkt):
@@ -123,7 +122,7 @@ class AnsweringMachine(object):
         try:
             self.sniff()
         except KeyboardInterrupt:
-            print "Interrupted by user"
+            print("Interrupted by user")
         
     def sniff(self):
         sniff(**self.optsniff)

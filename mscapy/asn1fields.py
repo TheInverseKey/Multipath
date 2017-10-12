@@ -7,10 +7,11 @@
 Classes that implement ASN.1 data structures.
 """
 
-from asn1.asn1 import *
-from asn1.ber import *
-from volatile import *
-from base_classes import BasePacket
+from .asn1.asn1 import *
+from .asn1.ber import *
+from .volatile import *
+from .base_classes import BasePacket
+from functools import reduce
 
 
 #####################
@@ -81,7 +82,7 @@ class ASN1F_field(ASN1F_element):
             return x.copy()
         if type(x) is list:
             x = x[:]
-            for i in xrange(len(x)):
+            for i in range(len(x)):
                 if isinstance(x[i], BasePacket):
                     x[i] = x[i].copy()
         return x
@@ -136,10 +137,10 @@ class ASN1F_enum_INTEGER(ASN1F_INTEGER):
         i2s = self.i2s = {}
         s2i = self.s2i = {}
         if type(enum) is list:
-            keys = xrange(len(enum))
+            keys = range(len(enum))
         else:
-            keys = enum.keys()
-        if filter(lambda x: type(x) is str, keys):
+            keys = list(enum.keys())
+        if [x for x in keys if type(x) is str]:
             i2s,s2i = s2i,i2s
         for k in keys:
             i2s[k] = enum[k]
@@ -153,12 +154,12 @@ class ASN1F_enum_INTEGER(ASN1F_INTEGER):
     
     def any2i(self, pkt, x):
         if type(x) is list:
-            return map(lambda z,pkt=pkt:self.any2i_one(pkt,z), x)
+            return list(map(lambda z,pkt=pkt:self.any2i_one(pkt,z), x))
         else:
             return self.any2i_one(pkt,x)        
     def i2repr(self, pkt, x):
         if type(x) is list:
-            return map(lambda z,pkt=pkt:self.i2repr_one(pkt,z), x)
+            return list(map(lambda z,pkt=pkt:self.i2repr_one(pkt,z), x))
         else:
             return self.i2repr_one(pkt,x)
 
@@ -223,7 +224,7 @@ class ASN1F_SEQUENCE(ASN1F_field):
             if s:
                 warning("Too many bytes to decode sequence: [%r]" % s) # XXX not reversible!
             return remain
-        except ASN1_Error,e:
+        except ASN1_Error as e:
             raise ASN1F_badsequence(e)
 
 class ASN1F_SET(ASN1F_SEQUENCE):
@@ -263,7 +264,7 @@ class ASN1F_SEQUENCE_OF(ASN1F_SEQUENCE):
         while s1:
             try:
                 p = self.asn1pkt(s1)
-            except ASN1F_badsequence,e:
+            except ASN1F_badsequence as e:
                 lst.append(packet.Raw(s1))
                 break
             lst.append(p)
@@ -318,13 +319,13 @@ class ASN1F_CHOICE(ASN1F_PACKET):
             raise ASN1_Error("ASN1F_CHOICE: got empty string")
         if ord(x[0]) not in self.choice:
             return packet.Raw(x),"" # XXX return RawASN1 packet ? Raise error 
-            raise ASN1_Error("Decoding Error: choice [%i] not found in %r" % (ord(x[0]), self.choice.keys()))
+            raise ASN1_Error("Decoding Error: choice [%i] not found in %r" % (ord(x[0]), list(self.choice.keys())))
 
         z = ASN1F_PACKET.extract_packet(self, self.choice[ord(x[0])], x)
         return z
     def randval(self):
-        return RandChoice(*map(lambda x:fuzz(x()), self.choice.values()))
+        return RandChoice(*[fuzz(x()) for x in list(self.choice.values())])
             
     
 # This import must come in last to avoid problems with cyclic dependencies
-import packet
+from . import packet

@@ -309,7 +309,7 @@ class _IANAOptField(PacketListField):
     def i2len(self, pkt, z):
         if z is None or z == []:
             return 0
-        return sum(map(lambda x: len(str(x)) ,z))
+        return sum([len(str(x)) for x in z])
 
     def getfield(self, pkt, s):
         l = self.length_from(pkt)
@@ -368,7 +368,7 @@ class _OptReqListField(StrLenField):
     def i2repr(self, pkt, x):
         s = []
         for y in self.i2h(pkt, x):
-            if dhcp6opts.has_key(y):
+            if y in dhcp6opts:
                 s.append(dhcp6opts[y])
             else:
                 s.append("%d" % y)
@@ -385,7 +385,7 @@ class _OptReqListField(StrLenField):
         return r
     
     def i2m(self, pkt, x):
-        return "".join(map(lambda y: struct.pack("!H", y), x))
+        return "".join([struct.pack("!H", y) for y in x])
 
 # A client may include an ORO in a solicit, Request, Renew, Rebind,
 # Confirm or Information-request
@@ -537,7 +537,7 @@ class _UserClassDataField(PacketListField):
     def i2len(self, pkt, z):
         if z is None or z == []:
             return 0
-        return sum(map(lambda x: len(str(x)) ,z))
+        return sum([len(str(x)) for x in z])
 
     def getfield(self, pkt, s):
         l = self.length_from(pkt)
@@ -679,8 +679,8 @@ class DomainNameListField(StrLenField):
                 return z
             return z+'\x00'
         res = ""
-        tmp = map(lambda y: map((lambda z: chr(len(z))+z), y.split('.')), x)
-        return "".join(map(lambda x: conditionalTrailingDot("".join(x)), tmp))
+        tmp = [list(map((lambda z: chr(len(z))+z), y.split('.'))) for y in x]
+        return "".join([conditionalTrailingDot("".join(x)) for x in tmp])
 
 class DHCP6OptSIPDomains(_DHCP6OptGuessPayload):       #RFC3319
     name = "DHCP6 Option - SIP Servers Domain Name List"
@@ -765,7 +765,7 @@ class DomainNameField(StrLenField):
             cur.append(x[1:1+l])
             x = x[l+1:]
         if x[0] != '\x00':
-            print "Found weird domain: '%s'. Keeping %s" % (save, x)
+            print("Found weird domain: '%s'. Keeping %s" % (save, x))
         return ".".join(cur)
 
     def i2m(self, pkt, x):
@@ -775,7 +775,7 @@ class DomainNameField(StrLenField):
             return z+'\x00'
         if not x:
             return ""
-        tmp = "".join(map(lambda z: chr(len(z))+z, x.split('.')))
+        tmp = "".join([chr(len(z))+z for z in x.split('.')])
         return conditionalTrailingDot(tmp)
 
 class DHCP6OptNISDomain(_DHCP6OptGuessPayload):             #RFC3898
@@ -897,7 +897,7 @@ DHCP6PrefVal="" # la valeur de preference a utiliser dans
 class _DHCP6GuessPayload(Packet):
     def guess_payload_class(self, payload):
         if len(payload) > 1 :
-            print ord(payload[0])
+            print(ord(payload[0]))
             return get_cls(dhcp6opts.get(ord(payload[0]),"DHCP6OptUnknown"), Raw)
         return Raw
 
@@ -1267,7 +1267,7 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
          See RFC 4280 for details.
 
    If you have a need for others, just ask ... or provide a patch."""
-        print msg
+        print(msg)
 
     def parse_options(self, dns="2001:500::1035", domain="localdomain, local",
                       startip="2001:db8::1", endip="2001:db8::20", duid=None,
@@ -1282,9 +1282,9 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
                 return val
             elif type(val) is str:
                 l = val.split(',')
-                return map(lambda x: x.strip(), l)
+                return [x.strip() for x in l]
             else:
-                print "Bad '%s' parameter provided." % param_name
+                print("Bad '%s' parameter provided." % param_name)
                 self.usage()
                 return -1
 
@@ -1317,11 +1317,11 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
                 self.dhcpv6_options[o[2]] = o[3](opt)
 
         if self.debug:
-            print "\n[+] List of active DHCPv6 options:"
-            opts = self.dhcpv6_options.keys()
+            print("\n[+] List of active DHCPv6 options:")
+            opts = list(self.dhcpv6_options.keys())
             opts.sort()
             for i in opts:
-                print "    %d: %s" % (i, repr(self.dhcpv6_options[i]))
+                print("    %d: %s" % (i, repr(self.dhcpv6_options[i])))
 
         # Preference value used in Advertise. 
         self.advpref = advpref
@@ -1348,18 +1348,17 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
 
             # Mac Address
             rawmac = get_if_raw_hwaddr(iface)[1]
-            mac = ":".join(map(lambda x: "%.02x" % ord(x), list(rawmac)))
+            mac = ":".join(["%.02x" % ord(x) for x in list(rawmac)])
 
             self.duid = DUID_LLT(timeval = timeval, lladdr = mac)
             
         if self.debug:
-            print "\n[+] Our server DUID:" 
+            print("\n[+] Our server DUID:") 
             self.duid.show(label_lvl=" "*4)
 
         ####
         # Find the source address we will use
-        l = filter(lambda x: x[2] == iface and in6_islladdr(x[0]), 
-                   in6_getifaddr())
+        l = [x for x in in6_getifaddr() if x[2] == iface and in6_islladdr(x[0])]
         if not l:
             warning("Unable to get a Link-Local address")
             return 
@@ -1372,7 +1371,7 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
         
 
         if self.debug:
-            print "\n[+] Starting DHCPv6 service on %s:" % self.iface 
+            print("\n[+] Starting DHCPv6 service on %s:" % self.iface) 
 
     def is_request(self, p):
         if not IPv6 in p:
@@ -1458,17 +1457,17 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
                 elif isinstance(it, DHCP6OptIA_TA):
                     l = it.iataopts
 
-                opsaddr = filter(lambda x: isinstance(x, DHCP6OptIAAddress),l)
-                a=map(lambda x: x.addr,  opsaddr)
+                opsaddr = [x for x in l if isinstance(x, DHCP6OptIAAddress)]
+                a=[x.addr for x in opsaddr]
                 addrs += a
                 it = it.payload
                     
-            addrs = map(lambda x: bo + x + n, addrs)
+            addrs = [bo + x + n for x in addrs]
             if debug:
                 msg = r + "[DEBUG]" + n + " Received " + g + "Decline" + n 
                 msg += " from " + bo + src + vendor + " for "
                 msg += ", ".join(addrs)+ n
-                print msg
+                print(msg)
 
             # See sect 18.1.7
 
@@ -1525,7 +1524,7 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
         reqsrc  = bo + reqsrc + n
         reptype = g + norm(reply.getlayer(UDP).payload.name) + n
 
-        print "Sent %s answering to %s from %s%s" % (reptype, reqtype, reqsrc, vendor)
+        print("Sent %s answering to %s from %s%s" % (reptype, reqtype, reqsrc, vendor))
 
     def make_reply(self, req):
         req_mac_src = req.src
@@ -1586,11 +1585,11 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
                     reqopts = []
                     if p.haslayer(DHCP6OptOptReq): # add only asked ones
                         reqopts = p[DHCP6OptOptReq].reqopts
-                        for o in self.dhcpv6_options.keys():
+                        for o in list(self.dhcpv6_options.keys()):
                             if o in reqopts:
                                 resp /= self.dhcpv6_options[o]
                     else: # advertise everything we have available
-                        for o in self.dhcpv6_options.keys():
+                        for o in list(self.dhcpv6_options.keys()):
                             resp /= self.dhcpv6_options[o]                    
 
             return resp
@@ -1607,14 +1606,14 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
             reqopts = []
             if p.haslayer(DHCP6OptOptReq): # add only asked ones
                 reqopts = p[DHCP6OptOptReq].reqopts
-                for o in self.dhcpv6_options.keys():
+                for o in list(self.dhcpv6_options.keys()):
                     if o in reqopts:
                         resp /= self.dhcpv6_options[o]
             else: 
                 # advertise everything we have available.
                 # Should not happen has clients MUST include 
                 # and ORO in requests (sec 18.1.1)   -- arno
-                for o in self.dhcpv6_options.keys():
+                for o in list(self.dhcpv6_options.keys()):
                     resp /= self.dhcpv6_options[o]          
 
             return resp            
@@ -1705,7 +1704,7 @@ dhcp6d( dns="2001:500::1035", domain="localdomain, local", duid=None)
             reqopts = []
             if p.haslayer(DHCP6OptOptReq):
                 reqopts = p[DHCP6OptOptReq].reqopts
-            for o in self.dhcpv6_options.keys():
+            for o in list(self.dhcpv6_options.keys()):
                 resp /= self.dhcpv6_options[o]
 
             return resp

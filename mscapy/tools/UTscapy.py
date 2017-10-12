@@ -82,10 +82,10 @@ vzM985aHXOHAxQN2UQZbQkUv3D4Vc+lyvalAffv3Tyg4ks3a22kPXiyeCGweviNX
 0K8TKasyOhGsVamTUAZBXfQVw1zmdS4rHDnbHgtIjX3DcCt6UIr0BHTYjdV0JbPj
 r1APYgXihjQwM2M83AKIhwQQJv/F3JFOFCQNsEI0QA==""")
     def get_local_dict(cls):
-        return dict(map(lambda (x,y): (x, y.name),  filter(lambda (x,y): isinstance(y, File), cls.__dict__.items())))
+        return dict([(x_y2[0], x_y2[1].name) for x_y2 in [x_y for x_y in list(cls.__dict__.items()) if isinstance(x_y[1], File)]])
     get_local_dict = classmethod(get_local_dict)
     def get_URL_dict(cls):
-        return dict(map(lambda (x,y): (x, y.URL),  filter(lambda (x,y): isinstance(y, File), cls.__dict__.items())))
+        return dict([(x_y3[0], x_y3[1].URL) for x_y3 in [x_y1 for x_y1 in list(cls.__dict__.items()) if isinstance(x_y1[1], File)]])
     get_URL_dict = classmethod(get_URL_dict)
 
 
@@ -160,7 +160,7 @@ class UnitTest(TestClass):
         self.keywords = []
         self.crc = None
         self.expand = 1
-    def __nonzero__(self):
+    def __bool__(self):
         return self.res
 
 
@@ -200,40 +200,40 @@ def parse_campaign_file(campaign_file):
         else:
             if test is None:
                 if l.strip():
-                    print >>sys.stderr, "Unkonwn content [%s]" % l.strip()
+                    print("Unkonwn content [%s]" % l.strip(), file=sys.stderr)
             else:
                 test.test += l
     return test_campaign
 
 def dump_campaign(test_campaign):
-    print "#"*(len(test_campaign.title)+6)
-    print "## %(title)s ##" % test_campaign
-    print "#"*(len(test_campaign.title)+6)
+    print("#"*(len(test_campaign.title)+6))
+    print("## %(title)s ##" % test_campaign)
+    print("#"*(len(test_campaign.title)+6))
     if test_campaign.sha and test_campaign.crc:
-        print "CRC=[%(crc)s] SHA=[%(sha)s]" % test_campaign
-    print "from file %(filename)s" % test_campaign
-    print
+        print("CRC=[%(crc)s] SHA=[%(sha)s]" % test_campaign)
+    print("from file %(filename)s" % test_campaign)
+    print()
     for ts in test_campaign:
         if ts.crc:
-            print "+--[%s]%s(%s)--" % (ts.name,"-"*max(2,80-len(ts.name)-18),ts.crc)
+            print("+--[%s]%s(%s)--" % (ts.name,"-"*max(2,80-len(ts.name)-18),ts.crc))
         else:
-            print "+--[%s]%s" % (ts.name,"-"*max(2,80-len(ts.name)-6))
+            print("+--[%s]%s" % (ts.name,"-"*max(2,80-len(ts.name)-6)))
         if ts.keywords:
-            print "  kw=%s" % ",".join(ts.keywords)
+            print("  kw=%s" % ",".join(ts.keywords))
         for t in ts:
-            print "%(num)03i %(name)s" % t
+            print("%(num)03i %(name)s" % t)
             c = k = ""
             if t.keywords:
                 k = "kw=%s" % ",".join(t.keywords)
             if t.crc:
                 c = "[%(crc)s] " % t
             if c or k:
-                print "    %s%s" % (c,k) 
+                print("    %s%s" % (c,k)) 
 
 #### COMPUTE CAMPAIGN DIGESTS ####
 
 def crc32(x):
-    return "%08X" % (0xffffffffL & zlib.crc32(x))
+    return "%08X" % (0xffffffff & zlib.crc32(x))
 
 def sha1(x):
     return sha.sha(x).hexdigest().upper()
@@ -257,8 +257,8 @@ def compute_campaign_digests(test_campaign):
 def filter_tests_on_numbers(test_campaign, num):
     if num:
         for ts in test_campaign:
-            ts.set = filter(lambda t: t.num in num, ts.set)
-        test_campaign.campaign = filter(lambda ts: len(ts.set) > 0, test_campaign.campaign)
+            ts.set = [t for t in ts.set if t.num in num]
+        test_campaign.campaign = [ts for ts in test_campaign.campaign if len(ts.set) > 0]
 
 def filter_tests_keep_on_keywords(test_campaign, kw):
     def kw_match(lst, kw):
@@ -269,7 +269,7 @@ def filter_tests_keep_on_keywords(test_campaign, kw):
     
     if kw:
         for ts in test_campaign:
-            ts.set = filter(lambda t: kw_match(t.keywords, kw), ts.set)
+            ts.set = [t for t in ts.set if kw_match(t.keywords, kw)]
 
 def filter_tests_remove_on_keywords(test_campaign, kw):
     def kw_match(lst, kw):
@@ -280,11 +280,11 @@ def filter_tests_remove_on_keywords(test_campaign, kw):
     
     if kw:
         for ts in test_campaign:
-            ts.set = filter(lambda t: not kw_match(t.keywords, kw), ts.set)
+            ts.set = [t for t in ts.set if not kw_match(t.keywords, kw)]
 
 
 def remove_empty_testsets(test_campaign):
-    test_campaign.campaign = filter(lambda ts: len(ts.set) > 0, test_campaign.campaign)
+    test_campaign.campaign = [ts for ts in test_campaign.campaign if len(ts.set) > 0]
 
 
 #### RUN CAMPAIGN #####
@@ -300,9 +300,9 @@ def run_campaign(test_campaign, get_interactive_session, verb=2):
             try:
                 if res is None or res:
                     the_res= True
-            except Exception,msg:
+            except Exception as msg:
                 t.output+="UTscapy: Error during result interpretation:\n"
-                t.output+="".join(traceback.format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback,))
+                t.output+="".join(traceback.format_exception(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2],))
             if the_res:
                 t.res = True
                 res = "passed"
@@ -313,12 +313,12 @@ def run_campaign(test_campaign, get_interactive_session, verb=2):
                 failed += 1
             t.result = res
             if verb > 1:
-                print >>sys.stderr,"%(result)6s %(crc)s %(name)s" % t
+                print("%(result)6s %(crc)s %(name)s" % t, file=sys.stderr)
     test_campaign.passed = passed
     test_campaign.failed = failed
     if verb:
-        print >>sys.stderr,"Campaign CRC=%(crc)s  SHA=%(sha)s" % test_campaign
-        print >>sys.stderr,"PASSED=%i FAILED=%i" % (passed, failed)
+        print("Campaign CRC=%(crc)s  SHA=%(sha)s" % test_campaign, file=sys.stderr)
+        print("PASSED=%i FAILED=%i" % (passed, failed), file=sys.stderr)
 
 
 #### INFO LINES ####
@@ -492,7 +492,7 @@ def campaign_to_LATEX(test_campaign):
 #### USAGE ####
                       
 def usage():
-    print >>sys.stderr,"""Usage: UTscapy [-m module] [-f {text|ansi|HTML|LaTeX}] [-o output_file] 
+    print("""Usage: UTscapy [-m module] [-f {text|ansi|HTML|LaTeX}] [-o output_file] 
                [-t testfile] [-k keywords [-k ...]] [-K keywords [-K ...]]
                [-l] [-d|-D] [-F] [-q[q]] [-P preexecute_python_code]
                [-s /path/to/scpay]
@@ -509,14 +509,14 @@ def usage():
 -k <kw1>,<kw2>,...\t: include only tests with one of those keywords (can be used many times)
 -K <kw1>,<kw2>,...\t: remove tests with one of those keywords (can be used many times)
 -P <preexecute_python_code>
-"""
+""", file=sys.stderr)
     raise SystemExit
 
 
 #### MAIN ####
 
 def main(argv):
-    import __builtin__
+    import builtins
 
     # Parse arguments
     
@@ -556,7 +556,7 @@ def main(argv):
             elif opt == "-f":
                 try:
                     FORMAT = Format.from_string(optarg)
-                except KeyError,msg:
+                except KeyError as msg:
                     raise getopt.GetoptError("Unknown output format %s" % msg)
             elif opt == "-t":
                 TESTFILE = open(optarg)
@@ -566,11 +566,11 @@ def main(argv):
                 LOCAL = 1
             elif opt == "-n":
                 NUM = []
-                for v in map( lambda x: x.strip(), optarg.split(",") ):
+                for v in [x.strip() for x in optarg.split(",")]:
                     try:
                         NUM.append(int(v))
                     except ValueError:
-                        v1,v2 = map(int, v.split("-"))
+                        v1,v2 = list(map(int, v.split("-")))
                         for vv in range(v1,v2+1):
                             NUM.append(vv)
             elif opt == "-m":
@@ -583,18 +583,18 @@ def main(argv):
         
         try:
             from scapy import all as scapy
-        except ImportError,e:
+        except ImportError as e:
             raise getopt.GetoptError("cannot import [%s]: %s" % (SCAPY,e))
 
         for m in MODULES:
             try:
                 mod = import_module(m)
-                __builtin__.__dict__.update(mod.__dict__)
-            except ImportError,e:
+                builtins.__dict__.update(mod.__dict__)
+            except ImportError as e:
                 raise getopt.GetoptError("cannot import [%s]: %s" % (m,e))
                 
-    except getopt.GetoptError,msg:
-        print >>sys.stderr,"ERROR:",msg
+    except getopt.GetoptError as msg:
+        print("ERROR:",msg, file=sys.stderr)
         raise SystemExit
 
     autorun_func = {

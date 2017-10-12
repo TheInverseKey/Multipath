@@ -8,10 +8,10 @@ Implementation for of the configuration object.
 """
 
 import os,time,socket,sys
-from data import *
-import base_classes
-import themes
-from error import log_scapy
+from .data import *
+from . import base_classes
+from . import themes
+from .error import log_scapy
 
 ############
 ## Config ##
@@ -26,7 +26,7 @@ class ConfClass(object):
         s=""
         keys = self.__class__.__dict__.copy()
         keys.update(self.__dict__)
-        keys = keys.keys()
+        keys = list(keys.keys())
         keys.sort()
         for i in keys:
             if i[0] != "_":
@@ -124,13 +124,13 @@ class Num2Layer:
     
     def __repr__(self):
         lst = []
-        for num,layer in self.num2layer.iteritems():
+        for num,layer in self.num2layer.items():
             if layer in self.layer2num and self.layer2num[layer] == num:
                 dir = "<->"
             else:
                 dir = " ->"
             lst.append((num,"%#6x %s %-20s (%s)" % (num,dir,layer.__name__,layer.name)))
-        for layer,num in self.layer2num.iteritems():
+        for layer,num in self.layer2num.items():
             if num not in self.num2layer or self.num2layer[num] != layer:
                 lst.append((num,"%#6x <-  %-20s (%s)" % (num,layer.__name__,layer.name)))
         lst.sort()
@@ -161,7 +161,7 @@ class CommandsList(list):
         return cmd # return cmd so that method can be used as a decorator
 
 def lsc():
-    print repr(conf.commands)
+    print(repr(conf.commands))
 
 class CacheInstance(dict):
     def __init__(self, name="noname", timeout=None):
@@ -199,7 +199,7 @@ class CacheInstance(dict):
         t0=time.time()
         return (k for k in dict.iterkeys(self) if t0-self._timetable[k] < self.timeout)
     def __iter__(self):
-        return self.iterkeys()
+        return iter(self.keys())
     def itervalues(self):
         if self.timeout is None:
             return dict.itervalues(self)
@@ -223,15 +223,15 @@ class CacheInstance(dict):
     def __len__(self):
         if self.timeout is None:
             return dict.__len__(self)
-        return len(self.keys())
+        return len(list(self.keys()))
     def summary(self):
         return "%s: %i valid items. Timeout=%rs" % (self.name, len(self), self.timeout)
     def __repr__(self):
         s = []
         if self:
-            mk = max(len(k) for k in self.iterkeys())
+            mk = max(len(k) for k in self.keys())
             fmt = "%%-%is %%s" % (mk+1)
-            for item in self.iteritems():
+            for item in self.items():
                 s.append(fmt % item)
         return "\n".join(s)
             

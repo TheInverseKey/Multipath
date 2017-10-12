@@ -26,7 +26,7 @@ class DNSStrField(StrField):
           return "\x00"
 
         x = [k[:63] for k in x.split(".")] # Truncate chunks that cannot be encoded (more than 63 bytes..)
-        x = map(lambda y: chr(len(y))+y, x)
+        x = [chr(len(y))+y for y in x]
         x = "".join(x)
         if x[-1] != "\x00":
             x += "\x00"
@@ -184,7 +184,7 @@ class RDataField(StrLenField):
             if s:
                 s = inet_pton(socket.AF_INET6, s)
         elif pkt.type in [2,3,4,5]:
-            s = "".join(map(lambda x: chr(len(x))+x, s.split(".")))
+            s = "".join([chr(len(x))+x for x in s.split(".")])
             if ord(s[-1]):
                 s += "\x00"
         return s

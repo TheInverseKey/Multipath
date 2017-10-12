@@ -10,9 +10,10 @@
 Utility functions for IPv6.
 """
 
-from config import conf
-from data import *
-from utils import *
+from .config import conf
+from .data import *
+from .utils import *
+from functools import reduce
 
 
 def construct_source_candidate_set(addr, plen, laddr, loname):
@@ -44,23 +45,23 @@ def construct_source_candidate_set(addr, plen, laddr, loname):
 
     cset = []
     if in6_isgladdr(addr) or in6_isuladdr(addr):
-	cset = filter(lambda x: x[1] == IPV6_ADDR_GLOBAL, laddr)
+	cset = [x for x in laddr if x[1] == IPV6_ADDR_GLOBAL]
     elif in6_islladdr(addr):
-	cset = filter(lambda x: x[1] == IPV6_ADDR_LINKLOCAL, laddr)
+	cset = [x for x in laddr if x[1] == IPV6_ADDR_LINKLOCAL]
     elif in6_issladdr(addr):
-	cset = filter(lambda x: x[1] == IPV6_ADDR_SITELOCAL, laddr)
+	cset = [x for x in laddr if x[1] == IPV6_ADDR_SITELOCAL]
     elif in6_ismaddr(addr):
 	if in6_ismnladdr(addr):
 	    cset = [('::1', 16, loname)]
 	elif in6_ismgladdr(addr):
-	    cset = filter(lambda x: x[1] == IPV6_ADDR_GLOBAL, laddr)
+	    cset = [x for x in laddr if x[1] == IPV6_ADDR_GLOBAL]
 	elif in6_ismlladdr(addr):
-	    cset = filter(lambda x: x[1] == IPV6_ADDR_LINKLOCAL, laddr)
+	    cset = [x for x in laddr if x[1] == IPV6_ADDR_LINKLOCAL]
 	elif in6_ismsladdr(addr):
-	    cset = filter(lambda x: x[1] == IPV6_ADDR_SITELOCAL, laddr)
+	    cset = [x for x in laddr if x[1] == IPV6_ADDR_SITELOCAL]
     elif addr == '::' and plen == 0:
-	cset = filter(lambda x: x[1] == IPV6_ADDR_GLOBAL, laddr)
-    cset = map(lambda x: x[0], cset)
+	cset = [x for x in laddr if x[1] == IPV6_ADDR_GLOBAL]
+    cset = [x[0] for x in cset]
     cset.sort(cmp=cset_sort) # Sort with global addresses first
     return cset            
 
@@ -155,7 +156,7 @@ def find_ifaddr2(addr, plen, laddr):
     if dstAddrType == IPV6_ADDR_LOOPBACK: 
         return None
 
-    tmp = [[]] + map(lambda (x,y,z): (in6_getAddrType(x), x, y, z), laddr)
+    tmp = [[]] + [(in6_getAddrType(x_y_z[0]), x_y_z[0], x_y_z[1], x_y_z[2]) for x_y_z in laddr]
     def filterSameScope(l, t):
         if (t[0] & dstAddrType & IPV6_ADDR_SCOPE_MASK) == 0:
             l.append(t)
@@ -167,8 +168,8 @@ def find_ifaddr2(addr, plen, laddr):
         return sameScope[0][1]
 
     elif l > 1: # Muliple addresses for our scope
-        stfAddr = filter(lambda x: x[0] & IPV6_ADDR_6TO4, sameScope)
-        nativeAddr = filter(lambda x: not (x[0] & IPV6_ADDR_6TO4), sameScope)
+        stfAddr = [x for x in sameScope if x[0] & IPV6_ADDR_6TO4]
+        nativeAddr = [x for x in sameScope if not (x[0] & IPV6_ADDR_6TO4)]
 
         if not (dstAddrType & IPV6_ADDR_6TO4): # destination is not 6to4
            if len(nativeAddr) != 0:
@@ -252,7 +253,7 @@ def in6_ifaceidtomac(ifaceid): # TODO: finish commenting function behavior
     first = struct.pack("B", ((first & 0xFD) | ulbit))
     oui = first + ifaceid[1:3]
     end = ifaceid[5:]
-    l = map(lambda x: "%.02x" % struct.unpack("B", x)[0], list(oui+end))
+    l = ["%.02x" % struct.unpack("B", x)[0] for x in list(oui+end)]
     return ":".join(l)
 
 def in6_addrtomac(addr):
@@ -391,7 +392,7 @@ def in6_getLocalUniquePrefix():
     tod = struct.pack("!II", i,j)
     # TODO: Add some check regarding system address gathering
     rawmac = get_if_raw_hwaddr(conf.iface6)[1]
-    mac = ":".join(map(lambda x: "%.02x" % ord(x), list(rawmac)))
+    mac = ":".join(["%.02x" % ord(x) for x in list(rawmac)])
     # construct modified EUI-64 ID
     eui64 = inet_pton(socket.AF_INET6, '::' + in6_mactoifaceid(mac))[8:] 
     import sha
@@ -421,7 +422,7 @@ def in6_getRandomizedIfaceId(ifaceid, previous=None):
 
     s = ""
     if previous is None:
-        d = "".join(map(chr, range(256)))
+        d = "".join(map(chr, list(range(256))))
         for i in range(8):
             s += random.choice(d)
         previous = s
@@ -449,7 +450,7 @@ def in6_ctop(addr):
     Returns None on error.
     """
     if len(addr) != 20 or not reduce(lambda x,y: x and y, 
-                                     map(lambda x: x in _rfc1924map, addr)):
+                                     [x in _rfc1924map for x in addr]):
         return None
     i = 0
     for c in addr:
@@ -555,8 +556,8 @@ def _in6_bitops(a1, a2, operator=0):
             lambda x,y: x & y,
             lambda x,y: x ^ y
           ]  
-    ret = map(fop[operator%len(fop)], a1, a2)
-    t = ''.join(map(lambda x: struct.pack('I', x), ret))
+    ret = list(map(fop[operator%len(fop)], a1, a2))
+    t = ''.join([struct.pack('I', x) for x in ret])
     return t
 
 def in6_or(a1, a2):
@@ -594,11 +595,11 @@ def in6_cidr2mask(m):
         raise Scapy_Exception("value provided to in6_cidr2mask outside [0, 128] domain (%d)" % m)
 
     t = []
-    for i in xrange(0, 4):
+    for i in range(0, 4):
         t.append(max(0, 2**32  - 2**(32-min(32, m))))
         m -= 32
 
-    return ''.join(map(lambda x: struct.pack('!I', x), t))
+    return ''.join([struct.pack('!I', x) for x in t])
 
 def in6_getnsma(a): 
     """
@@ -619,7 +620,7 @@ def in6_getnsmac(a): # return multicast Ethernet address associated with multica
 
     a = struct.unpack('16B', a)[-4:]
     mac = '33:33:'
-    mac += ':'.join(map(lambda x: '%.2x' %x, a))
+    mac += ':'.join(['%.2x' %x for x in a])
     return mac
 
 def in6_getha(prefix): 

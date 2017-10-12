@@ -8,11 +8,11 @@ Fields: basic data structures that make up parts of packets.
 """
 
 import struct,copy,socket
-from config import conf
-from volatile import *
-from data import *
-from utils import *
-from base_classes import BasePacket,Gen,Net
+from .config import conf
+from .volatile import *
+from .data import *
+from .utils import *
+from .base_classes import BasePacket,Gen,Net
 
 
 ############
@@ -76,7 +76,7 @@ class Field:
             return x.copy()
         if type(x) is list:
             x = x[:]
-            for i in xrange(len(x)):
+            for i in range(len(x)):
                 if isinstance(x[i], BasePacket):
                     x[i] = x[i].copy()
         return x
@@ -243,7 +243,7 @@ class SourceIPField(IPField):
         if x is None:
             dst=getattr(pkt,self.dstname)
             if isinstance(dst,Gen):
-                r = map(conf.route.route, dst)
+                r = list(map(conf.route.route, dst))
                 r.sort()
                 if r[0] != r[-1]:
                     warning("More than one possible route for %s"%repr(dst))
@@ -410,7 +410,7 @@ class PacketListField(PacketField):
     def i2len(self, pkt, val):
         return sum( len(p) for p in val )
     def do_copy(self, x):
-        return map(lambda p:p.copy(), x)
+        return [p.copy() for p in x]
     def getfield(self, pkt, s):
         c = l = None
         if self.length_from is not None:
@@ -493,7 +493,7 @@ class NetBIOSNameField(StrFixedLenField):
             x = ""
         x += " "*(l)
         x = x[:l]
-        x = "".join(map(lambda x: chr(0x41+(ord(x)>>4))+chr(0x41+(ord(x)&0xf)), x))
+        x = "".join([chr(0x41+(ord(x)>>4))+chr(0x41+(ord(x)&0xf)) for x in x])
         x = " "+x
         return x
     def m2i(self, pkt, x):
@@ -644,12 +644,12 @@ class BitField(Field):
         if self.rev:
             val = self.reverse(val)
         v <<= self.size
-        v |= val & ((1L<<self.size) - 1)
+        v |= val & ((1<<self.size) - 1)
         bitsdone += self.size
         while bitsdone >= 8:
             bitsdone -= 8
             s = s+struct.pack("!B", v >> bitsdone)
-            v &= (1L<<bitsdone)-1
+            v &= (1<<bitsdone)-1
         if bitsdone:
             return s,bitsdone,v
         else:
@@ -666,12 +666,12 @@ class BitField(Field):
         # split the substring byte by byte
         bytes = struct.unpack('!%dB' % nb_bytes , w)
 
-        b = 0L
+        b = 0
         for c in range(nb_bytes):
-            b |= long(bytes[c]) << (nb_bytes-c-1)*8
+            b |= int(bytes[c]) << (nb_bytes-c-1)*8
 
         # get rid of high order bits
-        b &= (1L << (nb_bytes*8-bn)) - 1
+        b &= (1 << (nb_bytes*8-bn)) - 1
 
         # remove low order bits
         b = b >> (nb_bytes*8 - self.size - bn)
@@ -698,7 +698,7 @@ class BitFieldLenField(BitField):
         self.count_of=count_of
         self.adjust=adjust
     def i2m(self, pkt, x):
-        return FieldLenField.i2m.im_func(self, pkt, x)
+        return FieldLenField.i2m.__func__(self, pkt, x)
 
 
 class XBitField(BitField):
@@ -711,10 +711,10 @@ class EnumField(Field):
         i2s = self.i2s = {}
         s2i = self.s2i = {}
         if type(enum) is list:
-            keys = xrange(len(enum))
+            keys = range(len(enum))
         else:
-            keys = enum.keys()
-        if filter(lambda x: type(x) is str, keys):
+            keys = list(enum.keys())
+        if [x for x in keys if type(x) is str]:
             i2s,s2i = s2i,i2s
         for k in keys:
             i2s[k] = enum[k]
@@ -731,19 +731,19 @@ class EnumField(Field):
     
     def any2i(self, pkt, x):
         if type(x) is list:
-            return map(lambda z,pkt=pkt:self.any2i_one(pkt,z), x)
+            return list(map(lambda z,pkt=pkt:self.any2i_one(pkt,z), x))
         else:
             return self.any2i_one(pkt,x)        
     def i2repr(self, pkt, x):
         if type(x) is list:
-            return map(lambda z,pkt=pkt:self.i2repr_one(pkt,z), x)
+            return list(map(lambda z,pkt=pkt:self.i2repr_one(pkt,z), x))
         else:
             return self.i2repr_one(pkt,x)
 
 class CharEnumField(EnumField):
     def __init__(self, name, default, enum, fmt = "1s"):
         EnumField.__init__(self, name, default, enum, fmt)
-        k = self.i2s.keys()
+        k = list(self.i2s.keys())
         if k and len(k[0]) != 1:
             self.i2s,self.s2i = self.s2i,self.i2s
     def any2i_one(self, pkt, x):
@@ -802,7 +802,7 @@ class MultiEnumField(EnumField):
         self.s2i_all = {}
         for m in enum:
             self.s2i_multi[m] = s2i = {}
-            for k,v in enum[m].iteritems():
+            for k,v in enum[m].items():
                 s2i[v] = k
                 self.s2i_all[v] = k
         Field.__init__(self, name, default, fmt)
@@ -847,14 +847,14 @@ class FlagsField(BitField):
     def __init__(self, name, default, size, names):
         self.multi = type(names) is list
         if self.multi:
-            self.names = map(lambda x:[x], names)
+            self.names = [[x] for x in names]
         else:
             self.names = names
         BitField.__init__(self, name, default, size)
     def any2i(self, pkt, x):
         if type(x) is str:
             if self.multi:
-                x = map(lambda y:[y], x.split("+"))
+                x = [[y] for y in x.split("+")]
             y = 0
             for i in x:
                 y |= 1 << self.names.index(i)
@@ -894,7 +894,7 @@ class FixedPointField(BitField):
 
     def i2h(self, pkt, val):
         int_part = val >> self.frac_bits
-        frac_part = val & (1L << self.frac_bits) - 1
+        frac_part = val & (1 << self.frac_bits) - 1
         frac_part /= 2.0**self.frac_bits
         return int_part+frac_part
     def i2repr(self, pkt, val):

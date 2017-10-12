@@ -274,4 +274,4 @@ class ColorPrompt:
             return self.__prompt
 
 
-import config
+from . import config

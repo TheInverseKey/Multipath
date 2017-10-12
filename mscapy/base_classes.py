@@ -12,8 +12,8 @@ Generators and packet meta classes.
 ################
 
 import re,random,socket
-import config
-import error
+from . import config
+from . import error
 
 class Gen(object):
     def __iter__(self):
@@ -57,12 +57,12 @@ class Net(Gen):
         if a == "*":
             a = (0,256)
         elif a.find("-") >= 0:
-            x,y = map(int,a.split("-"))
+            x,y = list(map(int,a.split("-")))
             if x > y:
                 y = x
-            a = (x &  (0xffL<<netmask) , max(y, (x | (0xffL>>(8-netmask))))+1)
+            a = (x &  (0xff<<netmask) , max(y, (x | (0xff>>(8-netmask))))+1)
         else:
-            a = (int(a) & (0xffL<<netmask),(int(a) | (0xffL>>(8-netmask)))+1)
+            a = (int(a) & (0xff<<netmask),(int(a) | (0xff>>(8-netmask)))+1)
         return a
 
     @classmethod
@@ -71,7 +71,7 @@ class Net(Gen):
         if not cls.ipaddress.match(net):
             tmp[0]=socket.gethostbyname(tmp[0])
         netmask = int(tmp[1])
-        return map(lambda x,y: cls._parse_digit(x,y), tmp[0].split("."), map(lambda x,nm=netmask: x-nm, (8,16,24,32))),netmask
+        return list(map(lambda x,y: cls._parse_digit(x,y), tmp[0].split("."), list(map(lambda x,nm=netmask: x-nm, (8,16,24,32))))),netmask
 
     def __init__(self, net):
         self.repr=net
@@ -80,10 +80,10 @@ class Net(Gen):
 
                                                                                                
     def __iter__(self):
-        for d in xrange(*self.parsed[3]):
-            for c in xrange(*self.parsed[2]):
-                for b in xrange(*self.parsed[1]):
-                    for a in xrange(*self.parsed[0]):
+        for d in range(*self.parsed[3]):
+            for c in range(*self.parsed[2]):
+                for b in range(*self.parsed[1]):
+                    for a in range(*self.parsed[0]):
                         yield "%i.%i.%i.%i" % (a,b,c,d)
     def choice(self):
         ip = []
@@ -207,7 +207,7 @@ class NewDefaultValues(Packet_metaclass):
     and it should still work.
     """    
     def __new__(cls, name, bases, dct):
-        from error import log_loading
+        from .error import log_loading
         import traceback
         try:
             for tb in traceback.extract_stack()+[("??",-1,None,"")]:

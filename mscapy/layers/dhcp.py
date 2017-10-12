@@ -140,7 +140,7 @@ DHCPOptions = {
 
 DHCPRevOptions = {}
 
-for k,v in DHCPOptions.iteritems():
+for k,v in DHCPOptions.items():
     if type(v) is str:
         n = v
         v = None
@@ -162,7 +162,7 @@ class RandDHCPOptions(RandField):
         if rndstr is None:
             rndstr = RandBin(RandNum(0,255))
         self.rndstr=rndstr
-        self._opts = DHCPOptions.values()
+        self._opts = list(DHCPOptions.values())
         self._opts.remove("pad")
         self._opts.remove("end")
     def _fix(self):
@@ -182,7 +182,7 @@ class DHCPOptionsField(StrField):
         s = []
         for v in x:
             if type(v) is tuple and len(v) >= 2:
-                if  DHCPRevOptions.has_key(v[0]) and isinstance(DHCPRevOptions[v[0]][1],Field):
+                if  v[0] in DHCPRevOptions and isinstance(DHCPRevOptions[v[0]][1],Field):
                     f = DHCPRevOptions[v[0]][1]
                     vv = ",".join(f.i2repr(pkt,val) for val in v[1:])
                 else:
@@ -210,7 +210,7 @@ class DHCPOptionsField(StrField):
             if len(x) < 2 or len(x) < ord(x[1])+2:
                 opt.append(x)
                 break
-            elif DHCPOptions.has_key(o):
+            elif o in DHCPOptions:
                 f = DHCPOptions[o]
 
                 if isinstance(f, str):
@@ -248,7 +248,7 @@ class DHCPOptionsField(StrField):
 
                 if isinstance(name, int):
                     onum, oval = name, "".join(lval)
-                elif DHCPRevOptions.has_key(name):
+                elif name in DHCPRevOptions:
                     onum, f = DHCPRevOptions[name]
                     if  f is not None:
                         lval = [f.addfield(pkt,"",f.any2i(pkt,val)) for val in lval]
@@ -261,7 +261,7 @@ class DHCPOptionsField(StrField):
                 s += chr(len(oval))
                 s += oval
 
-            elif (type(o) is str and DHCPRevOptions.has_key(o) and 
+            elif (type(o) is str and o in DHCPRevOptions and 
                   DHCPRevOptions[o][1] == None):
                 s += chr(DHCPRevOptions[o][0])
             elif type(o) is int:
@@ -327,12 +327,12 @@ class BOOTP_am(AnsweringMachine):
         return 1
 
     def print_reply(self, req, reply):
-        print "Reply %s to %s" % (reply.getlayer(IP).dst,reply.dst)
+        print("Reply %s to %s" % (reply.getlayer(IP).dst,reply.dst))
 
     def make_reply(self, req):        
         mac = req.src
         if type(self.pool) is list:
-            if not self.leases.has_key(mac):
+            if mac not in self.leases:
                 self.leases[mac] = self.pool.pop()
             ip = self.leases[mac]
         else:

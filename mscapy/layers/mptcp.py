@@ -43,7 +43,7 @@ class Sha1Field(Field):
         return sum([c << (4-e)*32 for e,c in enumerate(x)])
     def i2m(self, pkt, x):
         """Convert 160bits value to list of 32bits integers"""
-        return [x>>e*32 & (1<<32)-1 for e in xrange(4,-1,-1)]
+        return [x>>e*32 & (1<<32)-1 for e in range(4,-1,-1)]
     def i2repr(self, pkt, x):
         return lhex(self.i2h(pkt, x))
 

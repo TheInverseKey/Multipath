@@ -54,7 +54,7 @@ class NmapKnowledgeBase(KnowledgeBase):
                     warning("error reading nmap os fp base file")
                     continue
                 test = l[:op]
-                s = map(lambda x: x.split("="), l[op+1:cl].split("%"))
+                s = [x.split("=") for x in l[op+1:cl].split("%")]
                 si = {}
                 for n,v in s:
                     si[n] = v
@@ -85,7 +85,7 @@ def nmap_tcppacket_sig(pkt):
         r["W"] = "%X" % pkt.window
         r["ACK"] = pkt.ack==2 and "S++" or pkt.ack==1 and "S" or "O"
         r["Flags"] = TCPflags2str(pkt.payload.flags)
-        r["Ops"] = "".join(map(lambda x: x[0][0],pkt.payload.options))
+        r["Ops"] = "".join([x[0][0] for x in pkt.payload.options])
     else:
         r["Resp"] = "N"
     return r
@@ -111,14 +111,14 @@ def nmap_udppacket_sig(S,T):
 
 def nmap_match_one_sig(seen, ref):
     c = 0
-    for k in seen.keys():
-        if ref.has_key(k):
+    for k in list(seen.keys()):
+        if k in ref:
             if seen[k] in ref[k].split("|"):
                 c += 1
     if c == 0 and seen.get("Resp") == "N":
         return 0.7
     else:
-        return 1.0*c/len(seen.keys())
+        return 1.0*c/len(list(seen.keys()))
         
         
 def nmap_sig(target, oport=80, cport=81, ucport=1):
@@ -138,7 +138,7 @@ def nmap_sig(target, oport=80, cport=81, ucport=1):
               IP(str(IP(dst=target)/UDP(sport=5008,dport=ucport)/(300*"i"))) ]
 
     ans, unans = sr(tests, timeout=2)
-    ans += map(lambda x: (x,None), unans)
+    ans += [(x,None) for x in unans]
 
     for S,T in ans:
         if S.sport == 5008:
@@ -167,10 +167,10 @@ def nmap_search(sigs):
     guess = 0,[]
     for os,fp in nmap_kdb.get_base():
         c = 0.0
-        for t in sigs.keys():
+        for t in list(sigs.keys()):
             if t in fp:
                 c += nmap_match_one_sig(sigs[t], fp[t])
-        c /= len(sigs.keys())
+        c /= len(list(sigs.keys()))
         if c > guess[0]:
             guess = c,[ os ]
         elif c == guess[0]:
@@ -194,7 +194,7 @@ def nmap_sig2txt(sig):
               "Resp", "DF", "W", "ACK", "Flags", "Ops",
               "TOS", "IPLEN", "RIPTL", "RID", "RIPCK", "UCK", "ULEN", "DAT" ]
     txt=[]
-    for i in sig.keys():
+    for i in list(sig.keys()):
         if i not in torder:
             torder.append(i)
     for t in torder:
