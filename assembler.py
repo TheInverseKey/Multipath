@@ -1,6 +1,6 @@
 from scapy.all import *
-from mscapy.layers.mptcp import *
-from mscapy.layers.inet import TCP
+from scapy.layers.mptcp import *
+from scapy.layers.inet import TCP
 
 class MPTCPConvo(object):
     """

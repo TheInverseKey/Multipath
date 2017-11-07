@@ -1,3 +1,0 @@
-"""
-mpTCP Tests
-"""
