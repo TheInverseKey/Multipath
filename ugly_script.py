@@ -1,10 +1,13 @@
+from scapy.all import *
 from mscapy.layers.mptcp import *
 from mscapy.layers.inet import TCP
+
 
 class MPTCPConvo(object):
     """
     This is a class used to keep track of MPTCP convos
     """
+
     def __init__(self, addr_a, addr_b, dst_iface):
         """
         :param addr_a: Tuple: master address a (IP, Port)
@@ -41,7 +44,7 @@ class MPTCPConvo(object):
             'ADD_ADDR': self._process_add_addr,
             'MP_JOIN': self._process_mp_join
         }
-        
+
         for opt in pkt[TCP].options:
             for o in opt.mptcp:
                 subtype = MPTCP_subtypes[o.subtype]
@@ -50,3 +53,25 @@ class MPTCPConvo(object):
                     packet_methods[subtype](pkt)
                 else:
                     self.process_packet(pkt)
+
+class PktHandler(object):
+    def assign_pkt(self, pkt):
+        self.pkt = pkt
+        pkt_methods = {
+            'DSS': self.handle_dss,
+            'ADD_ADDR': self.handle_add_addr
+        }
+
+        for opt in self.pkt[TCP].options:
+            for o in opt.mptcp:
+                subtype = MPTCP_subtypes[o.subtype]
+                if subtype in pkt_methods.keys():
+                    """Calls function based on subtype"""
+                    pkt_methods[subtype]
+
+    def handle_dss(self):
+        self.dss = {
+            #'DSN': pkt[MPTCP].dsn
+            #'SN':  pkt[TCP].seq
+            #'DIFF': pkt[MPTCP].dsn - pkt[TCP].seq
+        }
