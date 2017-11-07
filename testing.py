@@ -1,8 +1,6 @@
 from scapy.all import *
-from mscapy import *
-from mscapy.layers import *
 from mscapy.layers.inet import TCP
-
-
-a= rdpcap("/home/python/Downloads/testing.pcapng")
-a[0].show2()
+from mscapy import packet as mpacket
+mshow2 = mpacket.Packet.show2
+a = rdpcap("/home/python/Downloads/testing.pcapng")
+a[0].packet.show2()
