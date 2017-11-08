@@ -45,11 +45,6 @@ def handle_pkt(pkt):
     has_dss = False
     dss = {}
 
-    """
-        if dss:
-            update_dss
-            if known:
-    """
 
     if frozenset({src_addr, dst_addr}) in convos:
         if has_dss:
