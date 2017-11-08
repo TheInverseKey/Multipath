@@ -41,16 +41,25 @@ def handle_pkt(pkt):
     convo_addr = "{src}->{dst}".format(src=src_addr, dst=dst_addr)
     reverse_addr = "{dst}->{src}".format(src=src_addr, dst=dst_addr)
 
-    # TODO check for DSS
-    has_dss = False
-    dss = {}
 
+    # TODO check for DSS
+
+    dss = {}
+    for opt in pkt[TCP].options:
+        try:
+            opt.mptcp.MPTCP_subtype = "0x2"
+            print "This is a dss packet"
+            has_dss = True
+        except:
+            has_dss = False
+            pass
 
     if frozenset({src_addr, dst_addr}) in convos:
         if has_dss:
             dss_maps[convo_addr] = dss
 
         #TODO FIN detection and handling
+
         """
         if ACK and FIN_detected_other_way:
             remove_convo;
@@ -58,6 +67,18 @@ def handle_pkt(pkt):
         """
 
         #TODO ADD_ADDR detection and handling
+        for opt in pkt[TCP].options:
+            try:
+                opt.mptcp.MPTCP_subtype = "0x3"
+                has_addr = True
+            except:
+                has_addr = False
+        for opt in pkt[TCP].options:
+            try:
+                opt.mptcp.MPTCP_subtype = "0x1"
+                has_join = True
+            except:
+                has_join = False
         """
         if previous_ADD_ADDR and MP_JOIN:
             convo# = get_convo_from_convos()
