@@ -42,7 +42,7 @@ def handle_pkt(pkt):
     reverse_addr = "{dst}->{src}".format(src=src_addr, dst=dst_addr)
 
 
-    # TODO check for DSS
+    # TODO check for dss - done / next check
 
     dss = {}
     for opt in pkt[TCP].options:
@@ -66,10 +66,10 @@ def handle_pkt(pkt):
             remove_dss_map;
         """
 
-        #TODO ADD_ADDR detection and handling
+        #TODO ADD_ADDR detection and handling - done / next check and advise
         for opt in pkt[TCP].options:
             try:
-                #checking for add_addr
+                # checking for add_addr
 
                 opt.mptcp.MPTCP_subtype = "0x3"
                 has_addr = True
@@ -78,7 +78,7 @@ def handle_pkt(pkt):
 
         for opt in pkt[TCP].options:
             try:
-                #checking for mp_join
+                # checking for mp_join
 
                 opt.mptcp.MPTCP_subtype = "0x1"
                 has_join = True
