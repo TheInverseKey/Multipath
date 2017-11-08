@@ -69,12 +69,17 @@ def handle_pkt(pkt):
         #TODO ADD_ADDR detection and handling
         for opt in pkt[TCP].options:
             try:
+                #checking for add_addr
+
                 opt.mptcp.MPTCP_subtype = "0x3"
                 has_addr = True
             except:
                 has_addr = False
+
         for opt in pkt[TCP].options:
             try:
+                #checking for mp_join
+
                 opt.mptcp.MPTCP_subtype = "0x1"
                 has_join = True
             except:
