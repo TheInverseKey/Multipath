@@ -59,6 +59,11 @@ def handle_pkt(pkt):
             dss_maps[convo_addr] = dss
 
         #TODO FIN detection and handling
+        try:
+            pkt[TCP].flags = "FA"
+            print "FIN ACK"
+        except:
+            pass
 
         """
         if ACK and FIN_detected_other_way:

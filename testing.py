@@ -1,6 +1,8 @@
 from scapy.all import *
-a = rdpcap("./testing.pcap")
+a = rdpcap("./finished.pcap")
+#a[0].show2()
 pkt = a[0]
+
 
 
 def get_dsn(pkt):
@@ -28,6 +30,15 @@ def get_dss_sn(pkt):
         except:
             pass
 
+def get_fin_ack(pkt):
+    try:
+        pkt[TCP].flags = "FA"
+        print "FIN ACK"
+    except:
+        pass
+
+
 get_dsn(pkt)
 get_dss(pkt)
 get_dss_sn(pkt)
+get_fin_ack(pkt)
