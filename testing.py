@@ -1,20 +1,32 @@
 from scapy.all import *
 a = rdpcap("./testing.pcap")
-a[0].show()
 pkt = a[0]
-for opt in pkt[TCP].options:
-    try:
-        print opt.mptcp.dsn
-    except:
-        pass
-
-#pkt[MPTCP].dsn
-#sniff(offline='/home/python/Desktop/testing.pcap', prn=lambda x: x.show(), filter = "tcp[54] == 30", store=0)
 
 
+def get_dsn(pkt):
+    for opt in pkt[TCP].options:
+        try:
+            dss = opt.mptcp.dsn
+            print opt.mptcp.dsn
+        except:
+            pass
 
-#def newconvo(pkt):
-    #sniff(iface=interface, prn=lambda x: x.show(), filter = "tcp[54] == 30", store=0)
-#def
+
+def get_dss(pkt):
+    for opt in pkt[TCP].options:
+        try:
+            opt.mptcp.MPTCP_subtype = "0x2"
+            print "This is a dss packet"
+        except:
+            pass
 
 
+def get_dss_sn(pkt):
+        try:
+            print pkt[TCP].seq
+        except:
+            pass
+
+get_dsn(pkt)
+get_dss(pkt)
+get_dss_sn(pkt)
