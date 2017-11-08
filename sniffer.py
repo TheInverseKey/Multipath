@@ -45,13 +45,18 @@ def handle_pkt(pkt):
     # TODO check for dss - done / next check
 
     dss = {}
+    has_dss = False
     for opt in pkt[TCP].options:
+
         try:
             opt.mptcp.MPTCP_subtype = "0x2"
             print "This is a dss packet"
             has_dss = True
+            SN = pkt[TCP].seq
+            DSN = opt.mptcp.dsn
+            DFF = DSN - SN
+            FIN = False
         except:
-            has_dss = False
             pass
 
     if frozenset({src_addr, dst_addr}) in convos:
@@ -59,11 +64,14 @@ def handle_pkt(pkt):
             dss_maps[convo_addr] = dss
 
         #TODO FIN detection and handling
-        try:
-            pkt[TCP].flags = "FA"
-            print "FIN ACK"
-        except:
-            pass
+
+            pkt[TCP].flag = "F"
+
+            try:
+                pkt[TCP].flags = "FA"
+                print "FIN ACK"
+            except:
+                pass
 
         """
         if ACK and FIN_detected_other_way:

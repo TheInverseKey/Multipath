@@ -1,5 +1,5 @@
 from scapy.all import *
-a = rdpcap("./finished.pcap")
+a = rdpcap("./testing.pcap")
 #a[0].show2()
 pkt = a[0]
 
