@@ -14,16 +14,14 @@ convos = [{
 
 dss_maps = {
     "IP:PORT->IP:PORT":{
-        "DSS": $DSS,
+        "DSN": $DSN,
         "SN": $SN,
-        "DIFF": $DSS - $SN,
-        "FIN": False
+        "DIFF": $DSS - $SN
     },
     "IP:PORT->IP:PORT":{
-        "DSS": $DSS,
+        "DSN": $DSN,
         "SN": $SN,
-        "DIFF": $DSS - $SN,
-        "FIN": False
+        "DIFF": $DSN - $SN
     }
 }
 """
@@ -56,7 +54,12 @@ def handle_pkt(pkt):
             DSN = opt.mptcp.dsn
             DIFF = DSN - SN
             FIN = False
-            dss = {"DSN": DSN, "SN": SN, "DIFF": DIFF, "FIN": FIN}
+            dss = {
+                "DSN": DSN,
+                "SN": SN,
+                "DIFF": DIFF,
+                "FIN": FIN
+            }
             
         except:
             pass
