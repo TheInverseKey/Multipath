@@ -23,6 +23,7 @@ def get_dss(pkt):
 
 def get_dss_sn(pkt):
         try:
+            seq = pkt[TCP].seq
             print pkt[TCP].seq
         except:
             pass
