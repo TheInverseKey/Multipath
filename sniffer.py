@@ -54,8 +54,10 @@ def handle_pkt(pkt):
             has_dss = True
             SN = pkt[TCP].seq
             DSN = opt.mptcp.dsn
-            DFF = DSN - SN
+            DIFF = DSN - SN
             FIN = False
+            dss = {"DSN": DSN, "SN": SN, "DIFF": DIFF, "FIN": FIN}
+            
         except:
             pass
 
