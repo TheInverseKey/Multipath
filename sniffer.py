@@ -13,15 +13,17 @@ convos = [{
 ]
 
 dss_maps = {
-    "IP:PORT->IP:PORT":{
+    (IP:PORT, IP:PORT):{
         "DSN": $DSN,
         "SN": $SN,
-        "DIFF": $DSS - $SN
+        "DIFF": $DSS - $SN,
+        "master": (IP:PORT, IP:PORT)
     },
-    "IP:PORT->IP:PORT":{
+    (IP:PORT2,IP:PORT2):{
         "DSN": $DSN,
         "SN": $SN,
-        "DIFF": $DSN - $SN
+        "DIFF": $DSN - $SN,
+        "master": (IP:PORT, IP:PORT)
     }
 }
 """
@@ -41,29 +43,25 @@ def handle_pkt(pkt):
 
     src_addr = "{ip}:{port}".format(ip=pkt[IP].src, port=pkt[IP].sport)
     dst_addr = "{ip}:{port}".format(ip=pkt[IP].dst, port=pkt[IP].dport)
-    convo_addr = "{src}->{dst}".format(src=src_addr, dst=dst_addr)
+    convo_addr = (src_addr, dst_addr)
     generic_addr = frozenset({src_addr, dst_addr})
-
-
-    # TODO check for dss - done / next check
 
     dss = {}
     has_dss = False
+
     for opt in pkt[TCP].options:
 
         try:
             if opt.mptcp.MPTCP_subtype == "0x2":
-                print "This is a dss packet"
+                print "DSS"
                 has_dss = True
                 SN = pkt[TCP].seq
                 DSN = opt.mptcp.dsn
-                DIFF = DSN - SN
-                FIN = False
+
                 dss = {
                     "DSN": DSN,
                     "SN": SN,
-                    "DIFF": DIFF,
-                    "FIN": FIN
+                    "DIFF": DSN - SN
                 }
             
         except:
@@ -84,30 +82,18 @@ def handle_pkt(pkt):
 
 
         #TODO ADD_ADDR detection and handling - done / next check and advise
-        for opt in pkt[TCP].options:
-            has_addr =False
-            try:
-                # checking for add_addr
-
-                opt.mptcp.MPTCP_subtype = "0x3"
-                has_addr = True
-            except:
-                pass
-
-        for opt in pkt[TCP].options:
-            has_join = False
-            try:
-                # checking for mp_join
-
-                opt.mptcp.MPTCP_subtype = "0x1"
-                has_join = True
-            except:
-                pass
+        """
+        if MP_CAPABLE and senders_key:
+            generate sublow token
+            store in dss_map dict
+        """
 
         """
-        if previous_ADD_ADDR and MP_JOIN:
-            convo# = get_convo_from_convos()
-            convos[convo#].add((IP:PORT, IP:PORT))
+        if MP_JOIN and subflow_token:
+            find matching convo
+            add to convos set
+            relate to master
+            verify HMACs (sentry)
         """
         #TODO replace seq and send (ie. assemler)
 
