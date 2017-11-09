@@ -1,4 +1,8 @@
 # Multipath
-This is a repo for multipath to a single stream
+This is a repo for multipath to a single stream for IDS systems
 
-This is an update to the readme
+Sniffer: The sniffer is complete for looking at the multipath packets
+Assembler: On hold
+RoadBlock: Tokens 
+
+
