@@ -69,39 +69,47 @@ def handle_pkt(pkt):
             dss_maps[convo_addr] = dss
 
         #TODO FIN detection and handling
-
-            pkt[TCP].flag = "F"
-
+            FIN = False
             try:
-                pkt[TCP].flags = "FA"
-                print "FIN ACK"
+                pkt[TCP].flag = "F"
+                FIN = True
+                print "FIN"
+                #remove dss map
             except:
                 pass
 
-        """
-        if ACK and FIN_detected_other_way:
-            remove_convo;
-            remove_dss_map;
-        """
+            FIN_ACK = False
+            try:
+                pkt[TCP].flags = "FA"
+                FIN_ACK =True
+                print "FIN ACK"
+
+                #remove convo and dss map
+
+            except:
+                pass
 
         #TODO ADD_ADDR detection and handling - done / next check and advise
         for opt in pkt[TCP].options:
+            has_addr =False
             try:
                 # checking for add_addr
 
                 opt.mptcp.MPTCP_subtype = "0x3"
                 has_addr = True
             except:
-                has_addr = False
+                pass
 
         for opt in pkt[TCP].options:
+            has_join = False
             try:
                 # checking for mp_join
 
                 opt.mptcp.MPTCP_subtype = "0x1"
                 has_join = True
             except:
-                has_join = False
+                pass
+
         """
         if previous_ADD_ADDR and MP_JOIN:
             convo# = get_convo_from_convos()
