@@ -25,7 +25,7 @@ dss_maps = {
     }
 }
 """
-convos = []
+convos = set()
 dss_maps = dict()
 
 
@@ -34,10 +34,15 @@ def handle_pkt(pkt):
     :param pkt: scapy packet from sniff:prn
     :return:
     """
+
+    FIN = 0x01
+    ACK = 0x10
+    FINACK = 0x11
+
     src_addr = "{ip}:{port}".format(ip=pkt[IP].src, port=pkt[IP].sport)
     dst_addr = "{ip}:{port}".format(ip=pkt[IP].dst, port=pkt[IP].dport)
     convo_addr = "{src}->{dst}".format(src=src_addr, dst=dst_addr)
-    reverse_addr = "{dst}->{src}".format(src=src_addr, dst=dst_addr)
+    generic_addr = frozenset({src_addr, dst_addr})
 
 
     # TODO check for dss - done / next check
@@ -47,47 +52,36 @@ def handle_pkt(pkt):
     for opt in pkt[TCP].options:
 
         try:
-            opt.mptcp.MPTCP_subtype = "0x2"
-            print "This is a dss packet"
-            has_dss = True
-            SN = pkt[TCP].seq
-            DSN = opt.mptcp.dsn
-            DIFF = DSN - SN
-            FIN = False
-            dss = {
-                "DSN": DSN,
-                "SN": SN,
-                "DIFF": DIFF,
-                "FIN": FIN
-            }
+            if opt.mptcp.MPTCP_subtype == "0x2":
+                print "This is a dss packet"
+                has_dss = True
+                SN = pkt[TCP].seq
+                DSN = opt.mptcp.dsn
+                DIFF = DSN - SN
+                FIN = False
+                dss = {
+                    "DSN": DSN,
+                    "SN": SN,
+                    "DIFF": DIFF,
+                    "FIN": FIN
+                }
             
         except:
             pass
 
-    if frozenset({src_addr, dst_addr}) in convos:
-        if has_dss:
+    if frozenset({src_addr, dst_addr}) in convos or True:
+        if has_dss or True:
             dss_maps[convo_addr] = dss
 
-        #TODO FIN detection and handling
-            FIN = False
-            try:
-                pkt[TCP].flag = "F"
-                FIN = True
+            if pkt[TCP].flags == 0x01:
                 print "FIN"
-                #remove dss map
-            except:
-                pass
+                del dss_maps[convo_addr]
 
-            FIN_ACK = False
-            try:
-                pkt[TCP].flags = "FA"
-                FIN_ACK =True
+            if pkt[TCP].flags == 0x11:
                 print "FIN ACK"
+                del dss_maps[convo_addr]
+                convos.discard(generic_addr)
 
-                #remove convo and dss map
-
-            except:
-                pass
 
         #TODO ADD_ADDR detection and handling - done / next check and advise
         for opt in pkt[TCP].options:
@@ -118,7 +112,12 @@ def handle_pkt(pkt):
         #TODO replace seq and send (ie. assemler)
 
     elif has_dss:
-        convos.append({(src_addr, dst_addr)})
+        convos.add(frozenset({src_addr, dst_addr}))
         dss_maps[convo_addr] = dss
 
         #TODO replace seq and send (ie. assembler)
+
+if __name__ == '__main__':
+        a = rdpcap('./pcaps/finished.pcap')
+        for pkt in a:
+            handle_pkt(pkt)
