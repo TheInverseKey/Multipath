@@ -1,3 +1,5 @@
+import hashlib
+import binascii
 from scapy.all import *
 from scapy.layers.mptcp import *
 from scapy.layers.inet import TCP
@@ -80,35 +82,41 @@ def handle_pkt(pkt):
                 del dss_maps[convo_addr]
                 convos.discard(generic_addr)
 
-
-        #TODO ADD_ADDR detection and handling - done / next check and advise
+        """MP_CAPABLE Handling"""
+        snd_key = None
         for opt in pkt[TCP].options:
             try:
                 MP_CAPABLE = opt.mptcp.MPTCP_subtype == "0x0"
-                snd_key = opt.mptcp.snd_key
+                if MP_CAPABLE:
+                    snd_key = opt.mptcp.snd_key
+                    break
             except:
                 pass
 
-            """
-            if MP_CAPABLE and senders_key:
-                generate sublow token
-                store in dss_map dict
-            """
+        if snd_key:
+            token = hashlib.sha1(binascii.unhexlify(snd_key)).hexdigest()
+            dss_maps[convo_addr]['token']=token
 
+        else:
+                print "MP_CAPABLE found but no key :("
+
+        """MP_JOIN Handling"""
+        rcv_token = None
         for opt in pkt[TCP].options:
             try:
                 MP_JOIN = opt.mptcp.MPTCP_subtype == "0x1"
-                rcv_token = opt.mptcp.rcv_token
+                if MP_JOIN:
+                    rcv_token = opt.mptcp.rcv_token
+                    break
 
             except:
                 pass
-            """
-        if MP_JOIN and subflow_token:
-            find matching convo
-            add to convos set
-            relate to master
-            verify HMACs (sentry)
-        """
+
+        for addrs, options in dss_maps.iteritems():
+            if options['token'] == rcv_token:
+                dss_maps[convo_addr]['master'] = addrs
+                break
+        
         #TODO replace seq and send (ie. assemler)
 
     elif has_dss:
