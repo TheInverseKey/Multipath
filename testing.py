@@ -1,7 +1,7 @@
 from scapy.all import *
-a = rdpcap("./mpcap.pcap")
-a[0].show2()
-#pkt = a[0]
+a = rdpcap("./mpjoin.pcap")
+#a[1].show2()
+pkt = a[1]
 
 
 
@@ -44,6 +44,15 @@ def get_send_key(pkt):
         except:
             pass
 
+def get_rcv_token(pkt):
+    for opt in pkt[TCP].options:
+        try:
+            rcv_token = opt.mptcp.rcv_token
+            print rcv_token
+        except:
+            pass
+
+get_rcv_token(pkt)
 #get_send_key(pkt)
 #get_dsn(pkt)
 #get_dss(pkt)
@@ -51,8 +60,8 @@ def get_send_key(pkt):
 #get_fin_ack(pkt)
 
 
-def getMpOption(tcp):
-    """Return a generator of mptcp options from a scapy TCP() object"""
-    for opt in tcp.options:
-        if opt.kind == 30:
-            yield opt.mptcp
+#def getMpOption(tcp):
+#    """Return a generator of mptcp options from a scapy TCP() object"""
+#    for opt in tcp.options:
+#        if opt.kind == 30:
+#            yield opt.mptcp

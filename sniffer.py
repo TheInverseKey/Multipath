@@ -82,13 +82,27 @@ def handle_pkt(pkt):
 
 
         #TODO ADD_ADDR detection and handling - done / next check and advise
-        """
-        if MP_CAPABLE and senders_key:
-            generate sublow token
-            store in dss_map dict
-        """
+        for opt in pkt[TCP].options:
+            try:
+                MP_CAPABLE = opt.mptcp.MPTCP_subtype == "0x0"
+                snd_key = opt.mptcp.snd_key
+            except:
+                pass
 
-        """
+            """
+            if MP_CAPABLE and senders_key:
+                generate sublow token
+                store in dss_map dict
+            """
+
+        for opt in pkt[TCP].options:
+            try:
+                MP_JOIN = opt.mptcp.MPTCP_subtype == "0x1"
+                rcv_token = opt.mptcp.rcv_token
+
+            except:
+                pass
+            """
         if MP_JOIN and subflow_token:
             find matching convo
             add to convos set
