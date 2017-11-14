@@ -1,8 +1,5 @@
-import hashlib
 import binascii
 from scapy.all import *
-from scapy.layers.mptcp import *
-from scapy.layers.inet import TCP
 
 
 class ConvoHandler(object):
@@ -28,6 +25,13 @@ class ConvoHandler(object):
         }
 
     def add_subflow(self, addr, token):
+        """
+        :param addr:  tuple (src, dst)
+        :param token: receiver's token
+        :return:
+        """
+        generic_addr = frozenset(addr)
+        self.convos.add(generic_addr)
         # Find matching recv_key
         for flow, info in self.master_flows.items():
             if info['token'] == token:
@@ -41,18 +45,38 @@ class ConvoHandler(object):
                           "but we have no record of that flow!".format(addr,master_addr)
 
     def update_dss(self, addr, dsn, seq_num):
-        # Find if master or sub
-        for flow_addr in self.master_flows.keys():
-            if addr == flow_addr:
-                self.master_flows[addr].update({
-                    'dsn': dsn,
-                    'diff': dsn - seq_num
-                })
+        """
+        :param addr:    tuple (src, dst)
+        :param dsn:     int packet dsn
+        :param seq_num: int packet sequence number
+        :return:
+        """
+        generic_addr = frozenset(addr)
+        if generic_addr in self.convos:
+            dss_dict = {
+                'dsn': dsn,
+                'diff': dsn - seq_num
+            }
 
+            if addr in self.master_flows:
+                self.master_flows[addr].update(dss_dict)
 
-"""
-class MasterFlow(object):
-    def __init__(self, src, dst, snd_key):
-        self.addr = {src, dst}
-        self.token = hashlib.sha1(binascii.unhexlify(snd_key)).hexdigest()[:8]
-"""
+            elif addr in self.subflows:
+                self.subflows[addr].update(dss_dict)
+
+        else:
+            print "Oh shit, we don't have a record for flow {}".format(addr)
+
+    def teardown(self, addr):
+        """
+        :param addr: tuple (src, dst)
+        :return:
+        """
+        generic_addr = frozenset(addr)
+        if generic_addr in self.convos:
+            if addr in self.master_flows:
+                del self.master_flows[addr]
+            elif addr in self.subflows:
+                del self.subflows[addr]
+
+            self.convos.remove(generic_addr)
