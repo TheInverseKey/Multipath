@@ -3,12 +3,83 @@ a = rdpcap("./mpjoin.pcap")
 #a[1].show2()
 pkt = a[1]
 
+convos = set()
+dss_maps = dict()
+
+dss = {}
+has_dss = False
+
+
+def get_packet():
+    dss = {}
+    has_dss = False
+    snd_key = None
+    rcv_token = None
+
+    for opt in pkt[TCP].options:
+        try:
+            if opt.mptcp.MPTCP_subtype == "0x2":
+                print "DSS"
+                has_dss = True
+                SN = pkt[TCP].seq
+                DSN = opt.mptcp.dsn
+
+                dss = {
+                    "DSN": DSN,
+                    "SN": SN,
+                    "DIFF": DSN - SN
+                }
+            FIN = pkt[TCP].flags == 0x01
+            FIN_ACK = pkt[TCP].flags == 0x011
+
+            """"MP CAPABLE then get sdn_key"""
+            MP_CAPABLE = opt.mptcp.MPTCP_subtype == "0x0"
+            if MP_CAPABLE:
+                snd_key = opt.mptcp.snd_key
+                break
+
+            """MP_JOIN rcv_token"""
+            MP_JOIN = opt.mptcp.MPTCP_subtype == "0x1"
+            if MP_JOIN:
+                rcv_token = opt.mptcp.rcv_token
+                print "rcv token"
+        except:
+            pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def get_dsn(pkt):
     for opt in pkt[TCP].options:
         try:
             dss = opt.mptcp.dsn
+            opt.mptcp.MPTCP_subtype = "0x2"
+
+            print "This is a dss packet"
             print opt.mptcp.dsn
         except:
             pass
@@ -18,6 +89,7 @@ def get_dss(pkt):
     for opt in pkt[TCP].options:
         try:
             opt.mptcp.MPTCP_subtype = "0x2"
+
             print "This is a dss packet"
         except:
             pass
@@ -52,7 +124,9 @@ def get_rcv_token(pkt):
         except:
             pass
 
-get_rcv_token(pkt)
+
+
+#get_rcv_token(pkt)
 #get_send_key(pkt)
 #get_dsn(pkt)
 #get_dss(pkt)
@@ -60,8 +134,3 @@ get_rcv_token(pkt)
 #get_fin_ack(pkt)
 
 
-#def getMpOption(tcp):
-#    """Return a generator of mptcp options from a scapy TCP() object"""
-#    for opt in tcp.options:
-#        if opt.kind == 30:
-#            yield opt.mptcp
