@@ -94,7 +94,7 @@ def handle_pkt(pkt):
                 pass
 
         if snd_key:
-            token = hashlib.sha1(binascii.unhexlify(snd_key)).hexdigest()
+            token = hashlib.sha1(binascii.unhexlify(snd_key)).hexdigest()[:8]
             dss_maps[convo_addr]['token']=token
 
         else:
@@ -116,7 +116,7 @@ def handle_pkt(pkt):
             if options['token'] == rcv_token:
                 dss_maps[convo_addr]['master'] = addrs
                 break
-        
+
         #TODO replace seq and send (ie. assemler)
 
     elif has_dss:
