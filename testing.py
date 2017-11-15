@@ -11,7 +11,7 @@ has_dss = False
 """Should this function return values?"""
 
 
-def get_packet():
+def get_packet_type():
     dss = {}
     has_dss = False
     snd_key = None
@@ -66,7 +66,7 @@ def get_packet():
 """Needs to take arguments, question is what ones?"""
 
 
-def get_packet_type():
+def handle_packet():
     
     if frozenset({src_addr, dst_addr}) in convos or True:
         if has_dss or True:
@@ -98,3 +98,23 @@ def get_packet_type():
     elif has_dss:
         convos.add(frozenset({src_addr, dst_addr}))
         dss_maps[convo_addr] = dss
+
+
+def send_packet(pkt, dst, sport,):
+
+    """This is the message for the packet."""
+    """packet[TCP].payload"""
+
+
+    ip = IP(frag=0, proto=tcp, dst=dst)
+    tcp =TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags, chksum=, )
+    data = packet[TCP].payload
+
+
+
+
+
+
+
+
+
