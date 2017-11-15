@@ -5,3 +5,5 @@
 
 *.pyc
 pcaps/
+
+*.pcap
