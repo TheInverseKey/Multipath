@@ -8,6 +8,25 @@ class ConvoHandler(object):
         self.master_flows = {}
         self.subflows = {}
 
+    def handle_packet(self, scapy_pkt):
+        pkt = Packet(scapy_pkt)
+        opts = pkt.get_opts()
+        if "DSS":
+            self.update_dss(pkt.addr, pkt.tcp.options.mptcp.dsn, pkt.tcp.seq)
+        if "FIN" in opts:
+            self.teardown(pkt.addr),
+        elif "FINACK" in opts:
+            self.teardown(pkt.addr, end_convo=True)
+        elif "MP_CAPABLE" in opts:
+            self.add_master(pkt.addr, pkt.tcp.options.mptcp.snd_key),
+        elif "MP_JOIN" in opts:
+            self.add_subflow(pkt.addr, pkt.tcp.options.mptcp.rcv_token),
+
+        #TODO
+        #pkt.convert()
+        #pkt.send()
+
+
     def add_master(self, addr, snd_key):
         """
         :param addr:    tuple with (src, dst)
@@ -19,12 +38,12 @@ class ConvoHandler(object):
         # Derive token from key
         snd_key = binascii.unhexlify(snd_key)
         token = hashlib.sha1(snd_key).hexdigest()[:8]
-
         self.master_flows[addr] = {
             'token': token
         }
 
-    def add_subflow(self, addr, token):
+
+    def add_subflow(self, addr, rcv_token):
         """
         :param addr:  tuple (src, dst)
         :param token: receiver's token
@@ -34,7 +53,7 @@ class ConvoHandler(object):
         self.convos.add(generic_addr)
         # Find matching recv_key
         for flow, info in self.master_flows.items():
-            if info['token'] == token:
+            if info['token'] == rcv_token:
                 master_addr = addr[::-1]
                 if self.master_flows[master_addr]:
                     self.subflows[addr] = {
@@ -67,7 +86,7 @@ class ConvoHandler(object):
         else:
             print "Oh shit, we don't have a record for flow {}".format(addr)
 
-    def teardown(self, addr):
+    def teardown(self, addr, end_convo=False):
         """
         :param addr: tuple (src, dst)
         :return:
@@ -79,4 +98,33 @@ class ConvoHandler(object):
             elif addr in self.subflows:
                 del self.subflows[addr]
 
-            self.convos.remove(generic_addr)
+            if end_convo:
+                self.convos.remove(generic_addr)
+
+class Packet(object):
+    def __init__(self, pkt):
+        self.src = "{}:{}".format(pkt[IP].src, pkt[TCP].sport)
+        self.dst = "{}:{}".format(pkt[IP].dst, pkt[TCP].dport)
+        self.tcp = pkt[TCP]
+        self.addr = (self.src, self.dst)
+        self.generic_addr = frozenset(addr)
+
+    def get_opts(self):
+        opts = set()
+        for opt in self.tcp.options:
+            if hasattr(opt, "mptcp"):
+                if hasattr(opt.mptcp, "MPTCP_subtype"):
+                    if opt.mptcp.MPTCP_subtype == "0x2":
+                        opts.add("DSS")
+                    if opt.mptcp.MPTCP_subtype == "0x0":
+                        opt.add("MPCAPABLE")
+                    if opt.mptcp.MPTCP_subtype == "0x1":
+                        opt.add("MPJOIN")
+
+            if self.tcp.flags == 0x01:
+                opts.add("FIN")
+
+            elif self.tcp.flags == 0x011:
+                opts.add("FINACK")
+
+        return opts
