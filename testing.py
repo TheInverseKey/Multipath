@@ -8,6 +8,7 @@ dss_maps = dict()
 
 dss = {}
 has_dss = False
+"""Should this function return values?"""
 
 
 def get_packet():
@@ -29,15 +30,30 @@ def get_packet():
                     "SN": SN,
                     "DIFF": DSN - SN
                 }
-            FIN = pkt[TCP].flags == 0x01
-            FIN_ACK = pkt[TCP].flags == 0x011
 
+        except:
+            pass
+
+        try:
+            FIN = pkt[TCP].flags == 0x01
+        except:
+            pass
+
+        try:
+            FIN_ACK = pkt[TCP].flags == 0x011
+        except:
+            pass
+
+        try:
             """"MP CAPABLE then get sdn_key"""
             MP_CAPABLE = opt.mptcp.MPTCP_subtype == "0x0"
             if MP_CAPABLE:
                 snd_key = opt.mptcp.snd_key
                 break
+        except:
+            pass
 
+        try:
             """MP_JOIN rcv_token"""
             MP_JOIN = opt.mptcp.MPTCP_subtype == "0x1"
             if MP_JOIN:
@@ -47,90 +63,38 @@ def get_packet():
             pass
 
 
+"""Needs to take arguments, question is what ones?"""
 
 
+def get_packet_type():
+    
+    if frozenset({src_addr, dst_addr}) in convos or True:
+        if has_dss or True:
+            dss_maps[convo_addr] = dss
 
+            if pkt[TCP].flags == 0x01:
+                print "FIN"
+                del dss_maps[convo_addr]
 
+            if pkt[TCP].flags == 0x11:
+                print "FIN ACK"
+                del dss_maps[convo_addr]
+                convos.discard(generic_addr)
 
+        """This might be spaced wrong"""
+        if snd_key:
+            token = hashlib.sha1(binascii.unhexlify(snd_key)).hexdigest()[:8]
+            dss_maps[convo_addr]['token']=token
 
+        else:
+                print "MP_CAPABLE found but no key :("
 
+        """This might be spaced wrong also"""
+        for addrs, options in dss_maps.iteritems():
+            if options['token'] == rcv_token:
+                dss_maps[convo_addr]['master'] = addrs
+                break
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def get_dsn(pkt):
-    for opt in pkt[TCP].options:
-        try:
-            dss = opt.mptcp.dsn
-            opt.mptcp.MPTCP_subtype = "0x2"
-
-            print "This is a dss packet"
-            print opt.mptcp.dsn
-        except:
-            pass
-
-
-def get_dss(pkt):
-    for opt in pkt[TCP].options:
-        try:
-            opt.mptcp.MPTCP_subtype = "0x2"
-
-            print "This is a dss packet"
-        except:
-            pass
-
-
-def get_dss_sn(pkt):
-        try:
-            seq = pkt[TCP].seq
-            print pkt[TCP].seq
-        except:
-            pass
-
-def get_fin_ack(pkt):
-    try:
-        pkt[TCP].flags = "FA"
-        print "FIN ACK"
-    except:
-        pass
-def get_send_key(pkt):
-    for opt in pkt[TCP].options:
-        try:
-            snd_key = opt.mptcp.snd_key
-            print snd_key
-        except:
-            pass
-
-def get_rcv_token(pkt):
-    for opt in pkt[TCP].options:
-        try:
-            rcv_token = opt.mptcp.rcv_token
-            print rcv_token
-        except:
-            pass
-
-
-
-#get_rcv_token(pkt)
-#get_send_key(pkt)
-#get_dsn(pkt)
-#get_dss(pkt)
-#get_dss_sn(pkt)
-#get_fin_ack(pkt)
-
-
+    elif has_dss:
+        convos.add(frozenset({src_addr, dst_addr}))
+        dss_maps[convo_addr] = dss
