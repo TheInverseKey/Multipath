@@ -104,12 +104,13 @@ def send_packet(pkt, dst, sport,):
 
     """This is the message for the packet."""
     """packet[TCP].payload"""
+    """check for master ip address"""
+    while self.master_flow[addr] == True:
 
-
-    ip = IP(frag=0, proto=tcp, dst=dst)
-    tcp =TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags, chksum=, )
-    data = packet[TCP].payload
-
+        #ip = IP(frag=0, proto=tcp, dst=dst)
+        #tcp =TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags, chksum=, )
+        #data = packet[TCP].payload
+        sr1(IP(frag=0, proto=tcp, dst=dst)/TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags, chksum=, )/packet[TCP].payload)
 
 
 
