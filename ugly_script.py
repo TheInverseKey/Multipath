@@ -3,12 +3,19 @@ from scapy.all import *
 
 
 class ConvoHandler(object):
+    """
+    Manages the multiple active convos
+    """
     def __init__(self):
         self.convos = set()
         self.master_flows = {}
         self.subflows = {}
 
     def handle_packet(self, scapy_pkt):
+        """
+        Get packet flags/options and then act accordingly
+        :param scapy_pkt:
+        """
         pkt = Packet(scapy_pkt)
         opts = pkt.get_opts()
         if "DSS":
@@ -31,9 +38,9 @@ class ConvoHandler(object):
 
     def add_master(self, addr, snd_key):
         """
+        Add a new convo to the master_flows dict (and derive token from key)
         :param addr:    tuple with (src, dst)
         :param snd_key: hex value of sender's key in packet
-        :return:
         """
         generic_addr = frozenset(addr)
         self.convos.add(generic_addr)
@@ -47,6 +54,7 @@ class ConvoHandler(object):
 
     def add_subflow(self, addr, rcv_token):
         """
+        Add a new convo to the subflows dict and find its master
         :param addr:  tuple (src, dst)
         :param token: receiver's token
         :return:
@@ -67,10 +75,10 @@ class ConvoHandler(object):
 
     def update_dss(self, addr, dsn, seq_num):
         """
+        Update a flows DSS map
         :param addr:    tuple (src, dst)
         :param dsn:     int packet dsn
         :param seq_num: int packet sequence number
-        :return:
         """
         generic_addr = frozenset(addr)
         if generic_addr in self.convos:
@@ -90,8 +98,8 @@ class ConvoHandler(object):
 
     def teardown(self, addr, end_convo=False):
         """
+        Remove flow dict entry and optionally the convo frozenset entry
         :param addr: tuple (src, dst)
-        :return:
         """
         generic_addr = frozenset(addr)
         if generic_addr in self.convos:
@@ -105,15 +113,22 @@ class ConvoHandler(object):
 
 class Packet(object):
     def __init__(self, pkt):
+        """
+        Rip scapy packet into the bits we need
+        :param pkt: A scapy packet
+        """
         self.src = "{}:{}".format(pkt[IP].src, pkt[TCP].sport)
         self.dst = "{}:{}".format(pkt[IP].dst, pkt[TCP].dport)
         self.tcp = pkt[TCP]
         self.addr = (self.src, self.dst)
-        self.generic_addr = frozenset(addr)
 
     def get_opts(self):
+        """
+        :return: set of all the options detected within the packet (will usually be 1).
+        """
         opts = set()
         for opt in self.tcp.options:
+            # If we con't do attr checks it will throw exceptions at us
             if hasattr(opt, "mptcp"):
                 if hasattr(opt.mptcp, "MPTCP_subtype"):
                     if opt.mptcp.MPTCP_subtype == "0x2":
@@ -126,7 +141,7 @@ class Packet(object):
             if self.tcp.flags == 0x01:
                 opts.add("FIN")
 
-            elif self.tcp.flags == 0x011:
+            elif self.tcp.flags == 0x11:
                 opts.add("FINACK")
 
         return opts
