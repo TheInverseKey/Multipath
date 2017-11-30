@@ -32,3 +32,10 @@ class Packet(object):
                 opts.add("FINACK")
 
         return opts
+    
+    def frag_check(self, threshold):
+        for opt in self.tcp.options:
+            if hasattr(opt, "mptcp"):
+                if hasattr(opt.mptcp, "length"):
+                    if opts.mptcp.length <= threshold:
+                        print "Length smaller then %s bytes, possible fragmentation!" % threshold
