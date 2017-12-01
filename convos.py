@@ -18,6 +18,7 @@ class ConvoHandler(object):
         """
         pkt = Packet(scapy_pkt)
         opts = pkt.get_opts()
+
         if "DSS":
             self.update_dss(pkt.addr, pkt.tcp.options.mptcp.dsn, pkt.tcp.seq)
         if "FIN" in opts:
@@ -29,12 +30,35 @@ class ConvoHandler(object):
         elif "MP_JOIN" in opts:
             self.add_subflow(pkt.addr, pkt.tcp.options.mptcp.rcv_token),
 
-        #TODO
-        #pkt.convert()
-        #pkt.send()
         while self.master_flow[addr] == True:
             sr1(IP(frag=0, proto=tcp, dst=dst)/TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags,
-                                                 chksum=, )/packet[TCP].payload)
+                                                 )/packet[TCP].payload)
+
+    def function1(self, pkt1, new_seq, src=None, dst=None)
+ 	"""
+        Convert Sequence Number to Interger
+	:param pkt1: 
+        :param new_seq:    int packet sequence number
+	:param src: 
+	:param dst:
+ 	"""
+	pkt = pkt1
+	self.pkt[TCP].seq = new_seq
+
+	if src:
+	src_ip = src[0]
+	src_port = src[1]
+	self.pkt[IP].src = src_ip
+	self.pkt[TCP].sport = src_port
+        
+        if dst:
+	dst_ip = dst[0]
+	dst_port = dst[1]
+	self.pkt[IP].dst = dst_ip
+	self.pkt[TCP].dport = dst_port
+     
+        #pkt.convert()
+        #pkt.send()
 
     def add_master(self, addr, snd_key):
         """

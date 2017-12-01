@@ -1,3 +1,5 @@
+from scapy.all import *
+
 class Packet(object):
     def __init__(self, pkt):
         """
