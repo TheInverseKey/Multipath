@@ -1,4 +1,8 @@
+
+import sys
 from scapy.all import *
+from datetime import datetime
+
 a = rdpcap("./mpjoin.pcap")
 #a[1].show2()
 pkt = a[1]
@@ -100,20 +104,26 @@ def handle_packet():
         dss_maps[convo_addr] = dss
 
 
-def send_packet(pkt, dst, sport,):
+def send_packet():
 
     """This is the message for the packet."""
     """packet[TCP].payload"""
     """check for master ip address"""
-    while self.master_flow[addr] == True:
 
         #ip = IP(frag=0, proto=tcp, dst=dst)
         #tcp =TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags, chksum=, )
         #data = packet[TCP].payload
-        sr1(IP(frag=0, proto=tcp, dst=dst)/TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags, chksum=, )/packet[TCP].payload)
+        #sr1(IP(frag=0, proto=tcp, dst=dst)/TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags, chksum=, )/packet[TCP].payload)
+        test_content = """this is only a test""" + datetime.now().strftime("%m/%y %H:%M:%S")
+        ip = IP(src="192.168.1.69", dst="127.0.0.1")/"Sequence number 1234"
+        tcp = ip / TCP(sport="80", dport="80", flags='PA',seq="1234", ack=1) / test_content
+        tcp.display()
 
+        print("length of packet {}".format(len(tcp)))
 
+        send(tcp)
 
+send_packet()
 
 
 

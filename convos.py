@@ -32,7 +32,9 @@ class ConvoHandler(object):
         #TODO
         #pkt.convert()
         #pkt.send()
-        while self.master_flow[addr] == True:
+            ip =
+
+
             sr1(IP(frag=0, proto=tcp, dst=dst)/TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags,
                                                  chksum=, )/packet[TCP].payload)
 
