@@ -37,5 +37,5 @@ class Packet(object):
         for opt in self.tcp.options:
             if hasattr(opt, "mptcp"):
                 if hasattr(opt.mptcp, "length"):
-                    if opts.mptcp.length <= threshold:
+                    if opt.mptcp.length <= threshold:
                         print "Length smaller then %s bytes, possible fragmentation!" % threshold
