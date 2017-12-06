@@ -11,7 +11,6 @@ class Packet(object):
         """
         self.src = "{}:{}".format(pkt[IP].src, pkt[TCP].sport)
         self.dst = "{}:{}".format(pkt[IP].dst, pkt[TCP].dport)
-        self.tcp = pkt[TCP] #TODO: remove this, it's redundant thanks to self.pkt addition
         self.addr = (self.src, self.dst)
         self.pkt = pkt
 
@@ -31,12 +30,11 @@ class Packet(object):
                     elif opt.mptcp.subtype == 1:
                         opts.add("MPJOIN")
 
-            if self.tcp.flags == 0x01:
+            if self.pkt[TCP].flags == 0x01:
                 opts.add("FIN")
 
-            elif self.tcp.flags == 0x11:
+            elif self.pkt[TCP].flags == 0x11:
                 opts.add("FINACK")
-        print opts
         return opts
 
     def convert(self, new_seq, src=None, dst=None):
@@ -71,7 +69,7 @@ class Packet(object):
         sendp(self.pkt, iface=iface)
 
     def frag_check(self, threshold):
-        for opt in self.tcp.options:
+        for opt in self.pkt[TCP].options:
             if hasattr(opt, "mptcp"):
                 if hasattr(opt.mptcp, "length"):
                     if opt.mptcp.length <= threshold:

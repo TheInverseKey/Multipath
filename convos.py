@@ -20,26 +20,38 @@ class ConvoHandler(object):
         opts = pkt.get_opts()
 
         if "DSS":
-            self.update_dss(pkt.addr, pkt.tcp.options.mptcp.dsn, pkt.tcp.seq)
+            self.update_dss(pkt.addr, pkt.pkt[TCP].options.mptcp.dsn, pkt.pkt[TCP].seq)
         if "FIN" in opts:
             self.teardown(pkt.addr)
         elif "FINACK" in opts:
             self.teardown(pkt.addr, end_convo=True)
         elif "MP_CAPABLE" in opts:
-            self.add_master(pkt.addr, pkt.tcp.options.mptcp.snd_key)
+            self.add_master(pkt.addr, pkt.pkt[TCP].options.mptcp.snd_key)
+            #MP_CAPABLE means a DSN doesn't exist and there is no payload, so why send it?
+            return
         elif "MP_JOIN" in opts:
-            self.add_subflow(pkt.addr, pkt.tcp.options.mptcp.rcv_token)
+            self.add_subflow(pkt.addr, pkt.pkt[TCP].options.mptcp.rcv_token)
 
         #TODO Maybe put this in it's own function, idk anymore man
         if pkt.addr in self.subflows.keys():
             master_addr = self.subflows[pkt.addr]['master']
             src, dst = master_addr[0], master_addr[1]
-            dsn = self.master_flows[master_addr]['dsn']
-            pkt.convert(dsn, src=src, dst=dst)
+            try:
+                dsn = self.subflows[pkt.addr]['dsn']
+                pkt.convert(dsn, src=src, dst=dst)
+
+            except KeyError:
+                print 'Oh shit, we have a packet but no listed DSN for it!'
+                print 'Here\'s the adress sequence number for reference: \n {} \n {}'.format(pkt.addr, pkt.pkt[TCP].seq)
 
         else:
-            dsn = self.master_flows[pkt.addr]['dsn']
-            pkt.convert(dsn)
+            try:
+                dsn = self.master_flows[pkt.addr]['dsn']
+                pkt.convert(dsn)
+                
+            except KeyError:
+                print 'Oh shit, we have a packet but no listed DSN for it!'
+                print 'Here\'s the adress sequence number for reference: \n {} \n {}'.format(pkt.addr, pkt.pkt[TCP].seq)
 
         pkt.send()
 
