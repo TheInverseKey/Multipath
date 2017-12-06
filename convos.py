@@ -39,30 +39,28 @@ class ConvoHandler(object):
         send(eth/ip/tcp/payload)
 
     def function1(self, pkt1, new_seq, src=None, dst=None)
- 	"""
+    """
         Convert Sequence Number to Interger
 	:param pkt1: 
         :param new_seq:    int packet sequence number
 	:param src: 
 	:param dst:
  	"""
-	pkt = pkt1
-	self.pkt[TCP].seq = new_seq
+    pkt = pkt1
+    self.pkt[TCP].seq = new_seq
 
-	if src:
-	src_ip = src[0]
-	src_port = src[1]
-	self.pkt[IP].src = src_ip
-	self.pkt[TCP].sport = src_port
+    if src:
+        src_ip = src[0]
+        src_port = src[1]
+        self.pkt[IP].src = src_ip
+        self.pkt[TCP].sport = src_port
         
-        if dst:
-	dst_ip = dst[0]
-	dst_port = dst[1]
-	self.pkt[IP].dst = dst_ip
-	self.pkt[TCP].dport = dst_port
+    if dst:
+        dst_ip = dst[0]
+        dst_port = dst[1]
+        self.pkt[IP].dst = dst_ip
+        self.pkt[TCP].dport = dst_port
      
-        #pkt.convert()
-        #pkt.send()
 
     def add_master(self, addr, snd_key):
         """
