@@ -10,7 +10,7 @@ class Packet(object):
         self.dst = "{}:{}".format(pkt[IP].dst, pkt[TCP].dport)
         self.tcp = pkt[TCP]
         self.addr = (self.src, self.dst)
-
+        self.pkt = pkt
     def get_opts(self):
         """
         :return: set of all the options detected within the packet (will usually be 1).
@@ -34,7 +34,32 @@ class Packet(object):
                 opts.add("FINACK")
 
         return opts
-    
+
+    def convert(self, pkt1, new_seq, src=None, dst=None)
+            """
+                Convert Sequence Number to Interger
+            :param pkt1: 
+                :param new_seq:    int packet sequence number
+            :param src: 
+            :param dst:
+             """
+
+        pkt = pkt1
+        self.pkt[TCP].seq = new_seq
+
+        if src:
+            src_ip = src[0]
+            src_port = src[1]
+            self.pkt[IP].src = src_ip
+            self.pkt[TCP].sport = src_port
+
+        if dst:
+            dst_ip = dst[0]
+            dst_port = dst[1]
+            self.pkt[IP].dst = dst_ip
+            self.pkt[TCP].dport = dst_port
+
+
     def frag_check(self, threshold):
         for opt in self.tcp.options:
             if hasattr(opt, "mptcp"):

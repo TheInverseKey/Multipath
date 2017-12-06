@@ -2,20 +2,23 @@
 import sys
 from scapy.all import *
 from datetime import datetime
-test_content = """this is only a test""" + datetime.now().strftime("%m/%y %H:%M:%S")
+
+#test_content = """this is only a test""" + datetime.now().strftime("%m/%y %H:%M:%S")
+"""
 eth = Ether(dst=MAC_dst, src=MAC_src, type=eth_type)
 ip = IP(src="192.168.1.69", dst="127.0.0.1", proto=6)/"Sequence number 1234"
 tcp = TCP(sport=80, dport=80, flags='PA', seq=1234, ack=1)
 a = ip/tcp/test_content
 a.display()
 send(a)
-
-
 """
+
+
 a = rdpcap("./mpjoin.pcap")
 a[1].show2()
 pkt = a[1]
 
+"""
 convos = set()
 dss_maps = dict()
 
