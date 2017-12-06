@@ -17,18 +17,16 @@ class Packet(object):
         :return: set of all the options detected within the packet (will usually be 1).
         """
         opts = set()
-        for opt in self.tcp.options:
+        for opt in self.pkt[TCP].options:
             # If we con't do attr checks it will throw exceptions at us
-            try:
-                if opt.mptcp.MPTCP_subtype == "0x2":
-                    opts.add("DSS")
-                elif opt.mptcp.MPTCP_subtype == "0x0":
-                    opt.add("MPCAPABLE")
-                elif opt.mptcp.MPTCP_subtype == "0x1":
-                    opt.add("MPJOIN")
-
-            except AttributeError:
-                pass
+            if hasattr(opt, 'mptcp'):
+                if hasattr(opt.mptcp, 'subtype'):
+                    if opt.mptcp.MPTCP_subtype == 2:
+                        opts.add("DSS")
+                    elif opt.mptcp.MPTCP_subtype == 0:
+                        opt.add("MPCAPABLE")
+                    elif opt.mptcp.MPTCP_subtype == 1:
+                        opt.add("MPJOIN")
 
             if self.tcp.flags == 0x01:
                 opts.add("FIN")
