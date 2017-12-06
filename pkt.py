@@ -59,6 +59,10 @@ class Packet(object):
             self.pkt[IP].dst = dst_ip
             self.pkt[TCP].dport = dst_port
 
+    def pkt_send(self):
+        
+        interface = "lo"
+        send(iface=interface)
 
     def frag_check(self, threshold):
         for opt in self.tcp.options:

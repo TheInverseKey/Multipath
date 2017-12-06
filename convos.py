@@ -31,12 +31,7 @@ class ConvoHandler(object):
             self.add_subflow(pkt.addr, pkt.tcp.options.mptcp.rcv_token),
 
 
-    def pkt_send(self, scapy_packet, ):
-        scapy_packet[IP].src=
-        scapy_packet[IP].dst= 127.0.0.1
-        scapy_packet[TCP].seq=
 
-        send(scapy_packet)
 
 
     def add_master(self, addr, snd_key):
