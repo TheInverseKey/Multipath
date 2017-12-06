@@ -22,16 +22,26 @@ class ConvoHandler(object):
         if "DSS":
             self.update_dss(pkt.addr, pkt.tcp.options.mptcp.dsn, pkt.tcp.seq)
         if "FIN" in opts:
-            self.teardown(pkt.addr),
+            self.teardown(pkt.addr)
         elif "FINACK" in opts:
             self.teardown(pkt.addr, end_convo=True)
         elif "MP_CAPABLE" in opts:
-            self.add_master(pkt.addr, pkt.tcp.options.mptcp.snd_key),
+            self.add_master(pkt.addr, pkt.tcp.options.mptcp.snd_key)
         elif "MP_JOIN" in opts:
-            self.add_subflow(pkt.addr, pkt.tcp.options.mptcp.rcv_token),
+            self.add_subflow(pkt.addr, pkt.tcp.options.mptcp.rcv_token)
 
+        #TODO Maybe put this in it's own function, idk anymore man
+        if pkt.addr in self.subflows.keys():
+            master_addr = self.subflows[pkt.addr]['master']
+            src, dst = master_addr[0], master_addr[1]
+            dsn = self.master_flows[master_addr]['dsn']
+            pkt.convert(dsn, src=src, dst=dst)
 
+        else:
+            dsn = self.master_flows[pkt.addr]['dsn']
+            pkt.convert(dsn)
 
+        pkt.send()
 
 
     def add_master(self, addr, snd_key):
@@ -82,7 +92,7 @@ class ConvoHandler(object):
         if generic_addr in self.convos:
             dss_dict = {
                 'dsn': dsn,
-                'diff': dsn - seq_num
+                'diff': dsn - seq_num #TODO examine if this is necessary (I don't think it is)
             }
 
             if addr in self.master_flows:

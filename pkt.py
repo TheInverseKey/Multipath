@@ -57,7 +57,7 @@ class Packet(object):
             self.pkt[IP].dst = dst_ip
             self.pkt[TCP].dport = dst_port
 
-    def pkt_send(self, iface=None):
+    def send(self, iface=None):
         """
         Sends self.pkt out specified iface or 'lo' if not specified
         :param iface: Name of interface to send to
