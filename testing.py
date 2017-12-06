@@ -18,7 +18,54 @@ a = rdpcap("./mpjoin.pcap")
 a[1].show2()
 pkt = a[1]
 
+self = pkt
+self.tcp = pkt[TCP] #TODO: remove this, it's redundant thanks to self.pkt addition
+self.addr = (self.src, self.dst)
+
 """
+def get_opts(self):
+    opts = set()
+    for opt in self.tcp.options:
+        # If we con't do attr checks it will throw exceptions at us
+        try:
+            if opt.mptcp.MPTCP_subtype == "0x2":
+                opts.add("DSS")
+            elif opt.mptcp.MPTCP_subtype == "0x0":
+                opts.add("MPCAPABLE")
+            elif opt.mptcp.o.subtype == "0x1":
+                opts.add("MPJOIN")
+                print "mpjoin"
+
+        except AttributeError:
+            pass
+
+        if self.tcp.flags == 0x01:
+            opts.add("FIN")
+
+        elif self.tcp.flags == 0x11:
+            opts.add("FINACK")
+    print opts
+    return opts
+"""
+
+
+def get_opts(self):
+    for opt in pkt[TCP].options:
+        if opt.kind == 30:
+            for o in opt:
+                try:
+                    print vars(o)
+                except:
+                    pass
+
+    for opt in pkt[TCP].options:
+            try:
+                MP_JOIN = opt.mptcp.MPTCP_subtype == "MP_JOIN"
+                print MP_JOIN
+            except:
+                pass
+"""
+
 convos = set()
 dss_maps = dict()
 
@@ -27,7 +74,7 @@ has_dss = False
 
 
 
-def get_packet_type():
+def get_packet_type(pkt):
     dss = {}
     has_dss = False
     snd_key = None
@@ -35,6 +82,7 @@ def get_packet_type():
 
     for opt in pkt[TCP].options:
         try:
+            print opt.mptcp.MPTCP_subtype
             if opt.mptcp.MPTCP_subtype == "0x2":
                 print "DSS"
                 has_dss = True
@@ -80,8 +128,8 @@ def get_packet_type():
 
 
 
-
-
+"""
+"""
 def handle_packet():
     
     if frozenset({src_addr, dst_addr}) in convos or True:
@@ -133,6 +181,7 @@ def handle_packet():
 #send_packet()
 
 
-
+get_opts(self)
+#get_packet_type(pkt)
 
 
