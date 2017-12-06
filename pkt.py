@@ -19,14 +19,16 @@ class Packet(object):
         opts = set()
         for opt in self.tcp.options:
             # If we con't do attr checks it will throw exceptions at us
-            if hasattr(opt, "mptcp"):
-                if hasattr(opt.mptcp, "MPTCP_subtype"):
-                    if opt.mptcp.MPTCP_subtype == "0x2":
-                        opts.add("DSS")
-                    if opt.mptcp.MPTCP_subtype == "0x0":
-                        opt.add("MPCAPABLE")
-                    if opt.mptcp.MPTCP_subtype == "0x1":
-                        opt.add("MPJOIN")
+            try:
+                if opt.mptcp.MPTCP_subtype == "0x2":
+                    opts.add("DSS")
+                elif opt.mptcp.MPTCP_subtype == "0x0":
+                    opt.add("MPCAPABLE")
+                elif opt.mptcp.MPTCP_subtype == "0x1":
+                    opt.add("MPJOIN")
+
+            except AttributeError:
+                pass
 
             if self.tcp.flags == 0x01:
                 opts.add("FIN")
