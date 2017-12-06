@@ -1,7 +1,10 @@
 from scapy.all import *
 
+
 class Packet(object):
+
     def __init__(self, pkt):
+
         """
         Rip scapy packet into the bits we need
         :param pkt: A scapy packet
@@ -21,19 +24,19 @@ class Packet(object):
             # If we con't do attr checks it will throw exceptions at us
             if hasattr(opt, 'mptcp'):
                 if hasattr(opt.mptcp, 'subtype'):
-                    if opt.mptcp.MPTCP_subtype == 2:
+                    if opt.mptcp.subtype == 2:
                         opts.add("DSS")
-                    elif opt.mptcp.MPTCP_subtype == 0:
-                        opt.add("MPCAPABLE")
-                    elif opt.mptcp.MPTCP_subtype == 1:
-                        opt.add("MPJOIN")
+                    elif opt.mptcp.subtype == 0:
+                        opts.add("MPCAPABLE")
+                    elif opt.mptcp.subtype == 1:
+                        opts.add("MPJOIN")
 
             if self.tcp.flags == 0x01:
                 opts.add("FIN")
 
             elif self.tcp.flags == 0x11:
                 opts.add("FINACK")
-
+        print opts
         return opts
 
     def convert(self, new_seq, src=None, dst=None):
@@ -73,3 +76,10 @@ class Packet(object):
                 if hasattr(opt.mptcp, "length"):
                     if opt.mptcp.length <= threshold:
                         print "Length smaller then %s bytes, possible fragmentation!" % threshold
+
+
+if __name__ == '__main__':
+    a = rdpcap("./mpjoin.pcap")
+    pkt = a[1]
+    p = Packet(pkt)
+    p.get_opts()
