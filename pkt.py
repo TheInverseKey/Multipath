@@ -8,9 +8,10 @@ class Packet(object):
         """
         self.src = "{}:{}".format(pkt[IP].src, pkt[TCP].sport)
         self.dst = "{}:{}".format(pkt[IP].dst, pkt[TCP].dport)
-        self.tcp = pkt[TCP]
+        self.tcp = pkt[TCP] #TODO: remove this, it's redundant thanks to self.pkt addition
         self.addr = (self.src, self.dst)
         self.pkt = pkt
+
     def get_opts(self):
         """
         :return: set of all the options detected within the packet (will usually be 1).
@@ -35,16 +36,13 @@ class Packet(object):
 
         return opts
 
-    def convert(self, pkt1, new_seq, src=None, dst=None)
-            """
-                Convert Sequence Number to Interger
-            :param pkt1: 
-                :param new_seq:    int packet sequence number
-            :param src: 
-            :param dst:
-             """
-
-        pkt = pkt1
+    def convert(self, new_seq, src=None, dst=None):
+        """
+        Takes self.pkt and changes sequence number and src/dst ip/port if specified
+        :param new_seq: the new seq number (DSN)
+        :param src: tuple {srcip, srcport}
+        :param dst: tuple {dstip, dstport}
+        """
         self.pkt[TCP].seq = new_seq
 
         if src:
@@ -59,10 +57,15 @@ class Packet(object):
             self.pkt[IP].dst = dst_ip
             self.pkt[TCP].dport = dst_port
 
-    def pkt_send(self):
-        
-        interface = "lo"
-        send(iface=interface)
+    def pkt_send(self, iface=None):
+        """
+        Sends self.pkt out specified iface or 'lo' if not specified
+        :param iface: Name of interface to send to
+        """
+        if not iface:
+            iface = "lo"
+
+        sendp(self.pkt, iface=iface)
 
     def frag_check(self, threshold):
         for opt in self.tcp.options:
