@@ -32,11 +32,13 @@ class ConvoHandler(object):
         #TODO
         #pkt.convert()
         #pkt.send()
-            ip =
+    def pkt_send(self):
+        eth = Ether(dst=MAC_dst, src=MAC_src, type=eth_type)
+        ip = IP(src=src_IP, dst=dst_IP, proto=6, len=length, chksum=chksum)
+        tcp = ip / TCP(sport=sprt, dport=dprt, flags=flag, seq=seq, ack=ack, chksum=tcp_chksum, window=window)
+        payload = data
+        send(eth/ip/tcp/payload)
 
-
-            sr1(IP(frag=0, proto=tcp, dst=dst)/TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags,
-                                                 chksum=, )/packet[TCP].payload)
 
     def add_master(self, addr, snd_key):
         """

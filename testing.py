@@ -2,9 +2,18 @@
 import sys
 from scapy.all import *
 from datetime import datetime
+test_content = """this is only a test""" + datetime.now().strftime("%m/%y %H:%M:%S")
+eth = Ether(dst=MAC_dst, src=MAC_src, type=eth_type)
+ip = IP(src="192.168.1.69", dst="127.0.0.1", proto=6)/"Sequence number 1234"
+tcp = TCP(sport=80, dport=80, flags='PA', seq=1234, ack=1)
+a = ip/tcp/test_content
+a.display()
+send(a)
 
+
+"""
 a = rdpcap("./mpjoin.pcap")
-#a[1].show2()
+a[1].show2()
 pkt = a[1]
 
 convos = set()
@@ -12,7 +21,7 @@ dss_maps = dict()
 
 dss = {}
 has_dss = False
-"""Should this function return values?"""
+
 
 
 def get_packet_type():
@@ -49,7 +58,7 @@ def get_packet_type():
             pass
 
         try:
-            """"MP CAPABLE then get sdn_key"""
+            
             MP_CAPABLE = opt.mptcp.MPTCP_subtype == "0x0"
             if MP_CAPABLE:
                 snd_key = opt.mptcp.snd_key
@@ -58,7 +67,7 @@ def get_packet_type():
             pass
 
         try:
-            """MP_JOIN rcv_token"""
+            
             MP_JOIN = opt.mptcp.MPTCP_subtype == "0x1"
             if MP_JOIN:
                 rcv_token = opt.mptcp.rcv_token
@@ -67,7 +76,7 @@ def get_packet_type():
             pass
 
 
-"""Needs to take arguments, question is what ones?"""
+
 
 
 def handle_packet():
@@ -85,7 +94,7 @@ def handle_packet():
                 del dss_maps[convo_addr]
                 convos.discard(generic_addr)
 
-        """This might be spaced wrong"""
+        
         if snd_key:
             token = hashlib.sha1(binascii.unhexlify(snd_key)).hexdigest()[:8]
             dss_maps[convo_addr]['token']=token
@@ -93,7 +102,7 @@ def handle_packet():
         else:
                 print "MP_CAPABLE found but no key :("
 
-        """This might be spaced wrong also"""
+        
         for addrs, options in dss_maps.iteritems():
             if options['token'] == rcv_token:
                 dss_maps[convo_addr]['master'] = addrs
@@ -103,27 +112,22 @@ def handle_packet():
         convos.add(frozenset({src_addr, dst_addr}))
         dss_maps[convo_addr] = dss
 
+"""
+#def send_packet():
 
-def send_packet():
-
-    """This is the message for the packet."""
-    """packet[TCP].payload"""
-    """check for master ip address"""
 
         #ip = IP(frag=0, proto=tcp, dst=dst)
         #tcp =TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags, chksum=, )
         #data = packet[TCP].payload
         #sr1(IP(frag=0, proto=tcp, dst=dst)/TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, flags=pkt[TCP].flags, chksum=, )/packet[TCP].payload)
-        test_content = """this is only a test""" + datetime.now().strftime("%m/%y %H:%M:%S")
-        ip = IP(src="192.168.1.69", dst="127.0.0.1")/"Sequence number 1234"
-        tcp = ip / TCP(sport="80", dport="80", flags='PA',seq="1234", ack=1) / test_content
-        tcp.display()
+#    test_content = """this is only a test""" + datetime.now().strftime("%m/%y %H:%M:%S")
+#    ip = IP(src="192.168.1.69", dst="127.0.0.1")/"Sequence number 1234"
+#    tcp = ip / TCP(sport="80", dport="80", flags='PA',seq="1234", ack=1) / test_content
+#    tcp.display()
+    # print("length of packet {}".format(len(tcp)))
+#       send(tcp)
 
-        print("length of packet {}".format(len(tcp)))
-
-        send(tcp)
-
-send_packet()
+#send_packet()
 
 
 
