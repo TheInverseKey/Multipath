@@ -26,7 +26,7 @@ class ConvoHandler(object):
                 print 'MPTCP Subtype:', opt
             if "DSS" in opt:
                 if hasattr(self.pkt, 'dsn'):
-                    self.update_dss(list(self.pkt.addr), self.pkt.dsn, self.pkt.pkt[TCP].seq)
+                    self.update_dss(self.pkt.addr, self.pkt.dsn, self.pkt.seq)
 
             if "FIN" in opt:
                 self.teardown(self.pkt.addr)
@@ -47,22 +47,34 @@ class ConvoHandler(object):
         #TODO Maybe put this in it's own function, idk anymore man
         if not hasattr(self, 'pkt'):
             raise AttributeError('You need a packet to do this')
-        try:
-            if self.pkt.addr in self.subflows.keys():
-                master_addr = self.subflows[self.pkt.addr]['master']
-                src, dst = master_addr[0], master_addr[1]
-                dsn = self.subflows[self.pkt.addr]['dsn']
-                self.pkt.convopt.mptcp.sert(dsn, src=src, dst=dst)
 
-            else:
-                dsn = self.master_flows[self.pkt.addr]['dsn']
-                self.pkt.convert(dsn)
+        if self.pkt.addr in self.subflows.keys():
+            final_addr = self.subflows[self.pkt.addr]['master']
+
+            try:
+                diff = self.subflows[self.pkt.addr]['diff']
+
+            except KeyError:
+                print self.subflows[self.pkt.addr]
+                return
+        else:
+            final_addr = self.pkt.addr
+
+            try:
+                diff = self.master_flows[self.pkt.addr]['diff']
+
+            except KeyError:
+                return
+
+        try:
+            self.pkt.convert(abs(self.pkt.seq + diff), src=final_addr[0], dst=final_addr[1])
 
         except KeyError:
             print 'Oh shit, we have a packet but no listed DSN for it!'
             print 'Here\'s the adress sequence number for reference:'
-            print '{} \n {}'.format(self.pkt.addr, self.pkt.pkt[TCP].seq)
+            print '{} \n {}'.format(self.pkt.addr, self.pkt.seq)
 
+        print 'Packet to Send:', self.pkt.pkt[TCP].sport,  self.pkt.pkt[TCP].dport, self.pkt.seq
         self.pkt.send()
 
 
@@ -150,9 +162,10 @@ if __name__ == '__main__':
     pcap = rdpcap('./demo.pcap')
 
     convo = ConvoHandler()
+
     for packet in pcap:
         convo.handle_packet(packet)
-
-    pprint(convo.master_flows)
-    pprint(convo.subflows)
-    pprint(convo.convos)
+        try:
+            convo.push_packet_as_single_stream()
+        except Exception as e:
+            print 'Bug: ', e

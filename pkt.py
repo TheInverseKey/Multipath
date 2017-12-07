@@ -15,6 +15,7 @@ class Packet(object):
         self.dst = (pkt[IP].dst, pkt[TCP].dport)
         self.addr = (self.src, self.dst)
         self.pkt = pkt
+        self.seq = pkt[TCP].seq
 
     def get_opts(self):
         """
