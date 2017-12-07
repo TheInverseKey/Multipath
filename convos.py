@@ -83,7 +83,7 @@ class ConvoHandler(object):
             logger.error('Here\'s the adress sequence number for reference:')
             logger.error('{} \n {}'.format(self.pkt.addr, self.pkt.seq))
 
-	logger.info('Packet to Send:'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
+        logger.info('Packet to Send:'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
         self.pkt.send()
 
 
