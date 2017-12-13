@@ -77,7 +77,7 @@ class Packet(object):
         """
         if not iface:
             iface = "lo"
-
+        self.pkt.show2()
         sendp(self.pkt, iface=iface)
 
     def get_mp_opt(self, attr):
