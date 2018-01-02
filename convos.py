@@ -173,7 +173,7 @@ if __name__ == '__main__':
 
     for packet in pcap:
         convo.handle_packet(packet)
-        try:
-            convo.push_packet_as_single_stream()
-        except Exception as e:
-            print 'Bug: ', ei
+        #try:
+        convo.push_packet_as_single_stream()
+        #except Exception as e:
+        #    print 'Bug: ', e

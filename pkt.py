@@ -77,7 +77,9 @@ class Packet(object):
         """
         if not iface:
             iface = "lo"
-        self.pkt.show2()
+        is_mp = lambda x: type(x) in  [scapy.layers.inet.TCPOption_MP, scapy.layers.inet.TCPOption_SAck]
+        new_ops = [i for i in self.pkt[TCP].options if not is_mp(i)]
+        self.pkt[TCP].options = new_ops
         sendp(self.pkt, iface=iface)
 
     def get_mp_opt(self, attr):
