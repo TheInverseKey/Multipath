@@ -77,7 +77,7 @@ class Packet(object):
         """
         if not iface:
             iface = "lo"
-        is_mp = lambda x: type(x) in  [scapy.layers.inet.TCPOption_MP, scapy.layers.inet.TCPOption_SAck]
+        is_mp = lambda x: type(x) in [scapy.layers.inet.TCPOption_MP, scapy.layers.inet.TCPOption_SAck]
         new_ops = [i for i in self.pkt[TCP].options if not is_mp(i)]
         self.pkt[TCP].options = new_ops
         sendp(self.pkt, iface=iface)
@@ -102,7 +102,7 @@ class Packet(object):
 if __name__ == '__m   ain__':
     import inspect
     from pprint import pprint
-    a = rdpcap("./demo.pcap")
+    a = rdpcap("./websiteloaded.pcap")
     pkt = a[8]
     p = Packet(pkt)
     print p.get_opts()
