@@ -83,7 +83,7 @@ class ConvoHandler(object):
             logger.error('Here\'s the adress sequence number for reference:')
             logger.error('{} \n {}'.format(self.pkt.addr, self.pkt.seq))
 
-        logger.info('Packet to Send:', self.pkt.pkt[TCP].sport,  self.pkt.pkt[TCP].dport, self.pkt.seq)
+	logger.info('Packet to Send:'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
         self.pkt.send()
 
 
@@ -93,7 +93,7 @@ class ConvoHandler(object):
         :param addr:    tuple with (src, dst)
         :param snd_key: hex value of sender's key in packet
         """
-        logger.info('Add Master:', addr)
+        logger.info('Add Master:'.format(addr))
         generic_addr = frozenset(addr)
         self.convos.add(generic_addr)
         # Derive token from key
@@ -110,7 +110,7 @@ class ConvoHandler(object):
         :param token: receiver's token
         :return:
         """
-        logger.info('Add Subflow:', addr)
+        logger.info('Add Subflow:'.format(addr))
         generic_addr = frozenset(addr)
         self.convos.add(generic_addr)
         # Find matching recv_key
@@ -122,8 +122,8 @@ class ConvoHandler(object):
                         'master': master_addr
                     }
                 else:
-                    logger.error("Something is fishy! {} should belong to master flow {}," \
-                          "but we have no record of that flow!".format(addr,master_addr))
+                    logger.error('Something is fishy! {} should belong to master flow {},' \
+                          'but we have no record of that flow!'.format(addr,master_addr))
 
     def update_dss(self, addr, dsn, seq_num):
         # type: (list, int, int) -> None
