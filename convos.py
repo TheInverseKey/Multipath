@@ -3,6 +3,8 @@ import hashlib
 from scapy.all import *
 from pkt import Packet
 import logging
+import json
+import os
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler = logging.FileHandler('Convo.log')
@@ -23,6 +25,7 @@ class ConvoHandler(object):
         self.convos = set()
         self.master_flows = {}
         self.subflows = {}
+        self.ip_relationships={}
 
     def handle_packet(self, scapy_pkt):
         """
@@ -94,6 +97,7 @@ class ConvoHandler(object):
         :param snd_key: hex value of sender's key in packet
         """
         logger.info('Add Master:'.format(addr))
+        self.ip_relationships[str(addr)] = []
         generic_addr = frozenset(addr)
         self.convos.add(generic_addr)
         # Derive token from key
@@ -118,6 +122,7 @@ class ConvoHandler(object):
             if info['token'] == rcv_token:
                 master_addr = flow[::-1]
                 if master_addr in self.master_flows.keys():
+                    self.ip_relationships[str(master_addr)].append(str(addr))
                     self.subflows[addr] = {
                         'master': master_addr
                     }
@@ -159,15 +164,26 @@ class ConvoHandler(object):
         if generic_addr in self.convos:
             if addr in self.master_flows:
                 del self.master_flows[addr]
+                self.export_ips(addr)
             elif addr in self.subflows:
                 del self.subflows[addr]
 
             if end_convo:
                 self.convos.remove(generic_addr)
 
+    def export_ips(self, addr, file="ip_relationships.json"):
+        if os.path.isfile(file):
+            perms = 'a'
+        else:
+            perms = 'w+'
+
+        with open(file, perms) as log_file:
+            log_file.write(json.dumps(self.ip_relationships))
+
+
 if __name__ == '__main__':
     from pprint import pprint
-    pcap = rdpcap('./demo.pcap')
+    pcap = rdpcap('/home/connor/Downloads/FinalDemo.pcap')
 
     convo = ConvoHandler()
 
