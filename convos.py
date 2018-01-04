@@ -183,7 +183,7 @@ class ConvoHandler(object):
 
 if __name__ == '__main__':
     from pprint import pprint
-    pcap = rdpcap('/home/connor/Downloads/FinalDemo.pcap')
+    pcap = rdpcap('FinalDemo.pcap')
 
     convo = ConvoHandler()
 

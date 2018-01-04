@@ -77,10 +77,13 @@ class Packet(object):
         """
         if not iface:
             iface = "lo"
-        is_mp = lambda x: type(x) in [scapy.layers.inet.TCPOption_MP, scapy.layers.inet.TCPOption_SAck]
-        new_ops = [i for i in self.pkt[TCP].options if not is_mp(i)]
-        self.pkt[TCP].options = new_ops
-        sendp(self.pkt, iface=iface)
+        #is_mp = lambda x: type(x) in [scapy.layers.inet.TCPOption_MP, scapy.layers.inet.TCPOption_SAck]
+        #new_ops = [i for i in self.pkt[TCP].options if not is_mp(i)]
+        #self.pkt[TCP].options = new_ops
+
+        new_pkt =Ether(src= self.pkt[Ether].src, dst=self.pkt[Ether].dst)/IP(version= self.pkt[IP].version, proto= self.pkt[IP].proto, src= self.pkt[IP].src, dst= self.pkt[IP].dst) / TCP(sport= self.pkt[TCP].sport, dport= self.pkt[TCP].dport, seq= self.pkt[TCP].seq, flags= self.pkt[TCP].flags) / self.pkt.payload
+
+        sendp(new_pkt, iface=iface)
 
     def get_mp_opt(self, attr):
         """
