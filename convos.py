@@ -33,6 +33,10 @@ class ConvoHandler(object):
         Get packet flags/options and then act accordingly
         :param scapy_pkt: a packet object from scapy library
         """
+        is_MPTCP = False
+        if not any(x == 30 for x in scapy_pkt[TCP].options):
+            return
+
         self.pkt = Packet(scapy_pkt)
         for opt in self.pkt.get_opts():
             if opt != 'DSS':
@@ -187,14 +191,13 @@ class ConvoHandler(object):
 
 
 if __name__ == '__main__':
-    from pprint import pprint
-    pcap = rdpcap('FinalDemo.pcap')
+    pcap = rdpcap('./demo.pcap')
 
     convo = ConvoHandler()
 
     for packet in pcap:
         convo.handle_packet(packet)
-        #try:
-        convo.push_packet_as_single_stream()
-        #except Exception as e:
-        #    print 'Bug: ', e
+        try:
+            convo.push_packet_as_single_stream()
+        except Exception as e:
+            print 'Bug: ', e

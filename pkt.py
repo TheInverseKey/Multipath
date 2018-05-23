@@ -89,19 +89,29 @@ class Packet(object):
         #is_mp = lambda x: type(x) in [scapy.layers.inet.TCPOption_MP, scapy.layers.inet.TCPOption_SAck]
         #new_ops = [i for i in self.pkt[TCP].options if not is_mp(i)]
         #self.pkt[TCP].options = new_ops
-
-        new_pkt = Ether(src=self.pkt[Ether].src,
-                        dst=self.pkt[Ether].dst)/\
-                  IP(version=self.pkt[IP].version,
-                     proto=self.pkt[IP].proto,
-                     src=self.pkt[IP].src,
-                     dst=self.pkt[IP].dst)/\
-                  TCP(sport=self.pkt[TCP].sport,
-                      dport=self.pkt[TCP].dport,
-                      seq=self.pkt[TCP].seq,
-                      flags=self.pkt[TCP].flags)/\
-                  self.pkt.payload
-
+        if pkt.haslayer(Raw):
+            new_pkt = Ether(src=self.pkt[Ether].src,
+                            dst=self.pkt[Ether].dst) / \
+                      IP(version=self.pkt[IP].version,
+                         proto=self.pkt[IP].proto,
+                         src=self.pkt[IP].src,
+                         dst=self.pkt[IP].dst) / \
+                      TCP(sport=self.pkt[TCP].sport,
+                          dport=self.pkt[TCP].dport,
+                          seq=self.pkt[TCP].seq,
+                          flags=self.pkt[TCP].flags) / \
+                      self.pkt[Raw].load
+        else:
+            new_pkt = Ether(src=self.pkt[Ether].src,
+                            dst=self.pkt[Ether].dst) / \
+                      IP(version=self.pkt[IP].version,
+                         proto=self.pkt[IP].proto,
+                         src=self.pkt[IP].src,
+                         dst=self.pkt[IP].dst) / \
+                      TCP(sport=self.pkt[TCP].sport,
+                          dport=self.pkt[TCP].dport,
+                          seq=self.pkt[TCP].seq,
+                          flags=self.pkt[TCP].flags)
         sendp(new_pkt, iface=iface)
 
     def get_mp_opt(self, attr):
@@ -122,20 +132,11 @@ class Packet(object):
 
 
 if __name__ == '__main__':
-    import inspect
-    from pprint import pprint
-    a = rdpcap("./websiteloaded.pcap")
-    pkt = a[8]
-    p = Packet(pkt)
-    print p.get_opts()
-    p.convert(6969)
-    print p.pkt[TCP].seq
-    for opt in p.pkt[TCP].options:
-        if hasattr(opt, 'mptcp'):
-            if hasattr(opt.mptcp, 'length'):
-                opt.mptcp.length = 1
-    p.frag_check(2)
-    for opt in p.pkt[TCP].options:
-        if opt.kind == 30:
-            print p.pkt[TCP].flags
-            print opt.summary
+    a = rdpcap("./demo.pcap")
+    mptcp = []
+    for pkt in a:
+        p = Packet(pkt)
+        for opt in p.pkt[TCP].options:
+            if opt.kind == 30:
+                mptcp.append(pkt)
+                p.send()
