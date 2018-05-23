@@ -5,11 +5,12 @@ from pkt import Packet
 import logging
 import json
 import os
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler = logging.FileHandler('Convo.log')
 handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -19,18 +20,18 @@ TCP = TCP
 
 class ConvoHandler(object):
     """
-    Manages the multiple active convos
+    Manages the multiple active multipath convos
     """
     def __init__(self):
         self.convos = set()
         self.master_flows = {}
         self.subflows = {}
-        self.ip_relationships={}
+        self.ip_relationships = {}
 
     def handle_packet(self, scapy_pkt):
         """
         Get packet flags/options and then act accordingly
-        :param scapy_pkt:
+        :param scapy_pkt: a packet object from scapy library
         """
         self.pkt = Packet(scapy_pkt)
         for opt in self.pkt.get_opts():
@@ -60,6 +61,7 @@ class ConvoHandler(object):
         if not hasattr(self, 'pkt'):
             raise AttributeError('You need a packet to do this')
 
+        # if packet is in a subflow, retrieve its master from dict and get the seq diff
         if self.pkt.addr in self.subflows.keys():
             final_addr = self.subflows[self.pkt.addr]['master']
 
@@ -69,6 +71,8 @@ class ConvoHandler(object):
             except KeyError:
                 print self.subflows[self.pkt.addr]
                 return
+
+        # handle packet as master (if the packet got this far it should already have a record in the dict)
         else:
             final_addr = self.pkt.addr
 
@@ -82,21 +86,21 @@ class ConvoHandler(object):
             self.pkt.convert(abs(self.pkt.seq + diff), src=final_addr[0], dst=final_addr[1])
 
         except KeyError:
-            logger.error('Oh shit, we have a packet but no listed DSN for it!')
-            logger.error('Here\'s the adress sequence number for reference:')
-            logger.error('{} \n {}'.format(self.pkt.addr, self.pkt.seq))
+            logger.error('Oh shit, we have a packet but no listed DSN for it! \n '
+                         'Here\'s the adress sequence number for reference: \n '
+                         'addr: {} \n seq: {}'.format(self.pkt.addr, self.pkt.seq))
 
-        logger.info('Packet to Send:'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
+        logger.info('Packet to Send: {} -> {} : {}'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
         self.pkt.send()
 
 
     def add_master(self, addr, snd_key):
         """
-        Add a new convo to the master_print opts if opts != 'DSS'flows dict (and derive token from key)
+        Add a new convo to the master_print opts if opts != 'DSS' flows dict (and derive token from key)
         :param addr:    tuple with (src, dst)
         :param snd_key: hex value of sender's key in packet
         """
-        logger.info('Add Master:'.format(addr))
+        logger.info('Add Master: {}'.format(addr))
         self.ip_relationships[str(addr)] = []
         generic_addr = frozenset(addr)
         self.convos.add(generic_addr)
@@ -114,7 +118,7 @@ class ConvoHandler(object):
         :param token: receiver's token
         :return:
         """
-        logger.info('Add Subflow:'.format(addr))
+        logger.info('Add Subflow: {}'.format(addr))
         generic_addr = frozenset(addr)
         self.convos.add(generic_addr)
         # Find matching recv_key
@@ -132,13 +136,13 @@ class ConvoHandler(object):
 
     def update_dss(self, addr, dsn, seq_num):
         # type: (list, int, int) -> None
-        """opt.mptcp.s
+        """
         Update a flows DSS map
         :param addr:    tuple (src, dst)
         :param dsn:     int packet dsn
         :param seq_num: int packet sequence number
         """
-        print 'Update DSS:', addr
+        logger.info('Update DSS: {}'.format(addr))
         generic_addr = frozenset(addr)
         if generic_addr in self.convos:
             dss_dict = {
@@ -153,12 +157,13 @@ class ConvoHandler(object):
                 self.subflows[addr].update(dss_dict)
 
         else:
-            logger.error("Oh shit, we don't have a record for flow {}".format(addr))
+            logger.error("We don't have a record for flow {}".format(addr))
 
     def teardown(self, addr, end_convo=False):
         """
         Remove flow dict entry and optionally the convo frozenset entry
         :param addr: tuple (src, dst)
+        :param end_convo: Used when a FINACK is given, remove convo frozenset entry
         """
         generic_addr = frozenset(addr)
         if generic_addr in self.convos:
@@ -178,7 +183,7 @@ class ConvoHandler(object):
             perms = 'w+'
 
         with open(file, perms) as log_file:
-            log_file.write(json.dumps(self.ip_relationships))
+            log_file.write(json.dumps(self.ip_relationships[str(addr)]))
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 from scapy.all import *
+
 #PyCharm Hack
 TCP=TCP
 IP=IP
@@ -9,7 +10,7 @@ class Packet(object):
 
         """
         Rip scapy packet into the bits we need
-        :param pkt: A scapy packet
+        :param pkt: A scapy packet object
         """
         self.src = (pkt[IP].src, pkt[TCP].sport)
         self.dst = (pkt[IP].dst, pkt[TCP].dport)
@@ -23,18 +24,25 @@ class Packet(object):
         """
         opts = set()
         for subtype in self.get_mp_opt('subtype'):
+            """
+            2 -> DSN/DSS
+            0 -> MPCAPABLE
+            1 -> MPJOIN
+            """
             if subtype == 2:
                 try:
                     self.dsn = self.get_mp_opt('dsn').next()
                 except StopIteration:
                     pass
                 opts.add("DSS")
+
             elif subtype == 0:
                 try:
                     self.snd_key = self.get_mp_opt('snd_key').next()
                 except StopIteration:
                     pass
                 opts.add("MPCAPABLE")
+
             elif subtype == 1:
                 try:
                     self.rcv_token = self.get_mp_opt('rcv_token').next()
@@ -77,11 +85,22 @@ class Packet(object):
         """
         if not iface:
             iface = "lo"
+
         #is_mp = lambda x: type(x) in [scapy.layers.inet.TCPOption_MP, scapy.layers.inet.TCPOption_SAck]
         #new_ops = [i for i in self.pkt[TCP].options if not is_mp(i)]
         #self.pkt[TCP].options = new_ops
 
-        new_pkt =Ether(src= self.pkt[Ether].src, dst=self.pkt[Ether].dst)/IP(version= self.pkt[IP].version, proto= self.pkt[IP].proto, src= self.pkt[IP].src, dst= self.pkt[IP].dst) / TCP(sport= self.pkt[TCP].sport, dport= self.pkt[TCP].dport, seq= self.pkt[TCP].seq, flags= self.pkt[TCP].flags) / self.pkt.payload
+        new_pkt = Ether(src=self.pkt[Ether].src,
+                        dst=self.pkt[Ether].dst)/\
+                  IP(version=self.pkt[IP].version,
+                     proto=self.pkt[IP].proto,
+                     src=self.pkt[IP].src,
+                     dst=self.pkt[IP].dst)/\
+                  TCP(sport=self.pkt[TCP].sport,
+                      dport=self.pkt[TCP].dport,
+                      seq=self.pkt[TCP].seq,
+                      flags=self.pkt[TCP].flags)/\
+                  self.pkt.payload
 
         sendp(new_pkt, iface=iface)
 
@@ -102,7 +121,7 @@ class Packet(object):
             print "Length smaller then %s bytes, possible fragmentation!" % threshold
 
 
-if __name__ == '__m   ain__':
+if __name__ == '__main__':
     import inspect
     from pprint import pprint
     a = rdpcap("./websiteloaded.pcap")
