@@ -34,8 +34,6 @@ class ConvoHandler(object):
         :param scapy_pkt: a packet object from scapy library
         """
         is_MPTCP = False
-        if not any(x == 30 for x in scapy_pkt[TCP].options):
-            return
 
         self.pkt = Packet(scapy_pkt)
         for opt in self.pkt.get_opts():
@@ -191,11 +189,11 @@ class ConvoHandler(object):
 
 
 if __name__ == '__main__':
-    pcap = rdpcap('./demo.pcap')
-
+    #pcap = rdpcap('./demo.pcap')
     convo = ConvoHandler()
+    sniff(iface="ens33", prn=handler, filter="tcp", store=0)
 
-    for packet in pcap:
+    def handler():
         convo.handle_packet(packet)
         try:
             convo.push_packet_as_single_stream()

@@ -6,3 +6,4 @@
 *.pyc
 pcaps/
 venv/
+Convo\.log

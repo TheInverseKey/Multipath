@@ -89,7 +89,7 @@ class Packet(object):
         #is_mp = lambda x: type(x) in [scapy.layers.inet.TCPOption_MP, scapy.layers.inet.TCPOption_SAck]
         #new_ops = [i for i in self.pkt[TCP].options if not is_mp(i)]
         #self.pkt[TCP].options = new_ops
-        if pkt.haslayer(Raw):
+        if self.pkt.haslayer(Raw):
             new_pkt = Ether(src=self.pkt[Ether].src,
                             dst=self.pkt[Ether].dst) / \
                       IP(version=self.pkt[IP].version,
