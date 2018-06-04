@@ -189,13 +189,22 @@ class ConvoHandler(object):
 
 
 if __name__ == '__main__':
-    #pcap = rdpcap('./demo.pcap')
+    #pcap = rdpcap('FinalDemo.pcap')
     convo = ConvoHandler()
+    def handler(pkt):
+        convo.handle_packet(pkt)
+        try:
+            convo.push_packet_as_single_stream()
+        except Exception as e:
+            print 'Bug: ', e
     sniff(iface="ens33", prn=handler, filter="tcp", store=0)
 
-    def handler():
+
+"""
+    for packet in pcap:
         convo.handle_packet(packet)
         try:
             convo.push_packet_as_single_stream()
         except Exception as e:
             print 'Bug: ', e
+"""
