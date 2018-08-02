@@ -107,11 +107,19 @@ class ConvoHandler(object):
         generic_addr = frozenset(addr)
         self.convos.add(generic_addr)
         # Derive token from key
-        snd_key = binascii.unhexlify(snd_key)
-        token = hashlib.sha1(snd_key).hexdigest()[:8]
-        self.master_flows[addr] = {
-            'token': token
-        }
+        #snd_key = binascii.unhexlify(snd_key)
+	#print len(binascii.unhexlify(snd_key))
+
+	# If odd len string, 0pad it
+	#snd_key = snd_key.zfill(8)
+	snd_key = binascii.unhexlify(snd_key)
+	key = open("keys.txt", "a")
+	key.writeline(snd_key)
+	key.close()
+	token = haslib.sha1(snd_key).hexdigest()[:8]
+	self.master_flows[addr] = {
+		'token': token
+	}
 
     def add_subflow(self, addr, rcv_token):
         """
@@ -197,7 +205,7 @@ if __name__ == '__main__':
             convo.push_packet_as_single_stream()
         except Exception as e:
             print 'Bug: ', e
-    sniff(iface="ens33", prn=handler, filter="tcp", store=0)
+    sniff(iface="eno1", prn=handler, filter="tcp", store=0)
 
 
 """
