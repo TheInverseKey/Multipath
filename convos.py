@@ -107,16 +107,12 @@ class ConvoHandler(object):
         generic_addr = frozenset(addr)
         self.convos.add(generic_addr)
         # Derive token from key
-        #snd_key = binascii.unhexlify(snd_key)
-	#print len(binascii.unhexlify(snd_key))
-
 	# If odd len string, 0pad it
-	#snd_key = snd_key.zfill(8)
+	if len(snd_key) % 2:
+		snd_key = '0' + snd_key
+	print "*** " + str(len(snd_key))
 	snd_key = binascii.unhexlify(snd_key)
-	key = open("keys.txt", "a")
-	key.writeline(snd_key)
-	key.close()
-	token = haslib.sha1(snd_key).hexdigest()[:8]
+	token = hashlib.sha1(snd_key).hexdigest()[:8]
 	self.master_flows[addr] = {
 		'token': token
 	}
@@ -200,11 +196,12 @@ if __name__ == '__main__':
     #pcap = rdpcap('FinalDemo.pcap')
     convo = ConvoHandler()
     def handler(pkt):
-        convo.handle_packet(pkt)
-        try:
-            convo.push_packet_as_single_stream()
-        except Exception as e:
-            print 'Bug: ', e
+        if TCP in pkt:
+		convo.handle_packet(pkt)
+        	try:
+            		convo.push_packet_as_single_stream()
+        	except Exception as e:
+            		print 'Bug: ', e
     sniff(iface="eno1", prn=handler, filter="tcp", store=0)
 
 
