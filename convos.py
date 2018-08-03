@@ -146,7 +146,7 @@ class ConvoHandler(object):
 
                     # Connection Flood Check
                     #TODO remove magic number
-                    CONN_LIMIT = 5
+                    CONN_LIMIT = 10
                     if len(self.ip_relationships[str(master_addr)] > CONN_LIMIT):
                         logging.warn('Possible Connection Flood Detected')
                         self.teardown(master_addr, end_convo=True)
