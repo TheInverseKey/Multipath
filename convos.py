@@ -6,14 +6,7 @@ import logging
 import json
 import os
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.FileHandler('Convo.log')
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
+logging.basicConfig(filename='Convo.log',level=logging.DEBUG)
 
 #PyCharm Hack
 TCP = TCP
@@ -208,11 +201,11 @@ if __name__ == '__main__':
     convo = ConvoHandler()
     def handler(pkt):
         if TCP in pkt:
-		convo.handle_packet(pkt)
-        	try:
-            		convo.push_packet_as_single_stream()
-        	except Exception as e:
-            		print 'Bug: ', e
+            convo.handle_packet(pkt)
+            try:
+                convo.push_packet_as_single_stream()
+            except Exception as e:
+                print 'Bug: ', e
     sniff(iface="eno1", prn=handler, filter="tcp", store=0)
 
 
