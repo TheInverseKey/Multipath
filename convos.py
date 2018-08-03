@@ -31,32 +31,32 @@ class ConvoHandler(object):
         self.pkt = Packet(scapy_pkt)
         for opt in self.pkt.get_opts():
             if opt != 'DSS':
-                logging.info('MPTCP Subtype: {}'.format(opt))
+                logging.debug('MPTCP Subtype: {}'.format(opt))
 
             if "DSS" in opt:
                 if hasattr(self.pkt, 'dsn'):
-                    logging.info('Attempting Update DSS for {} with {}, seq # {}'.format(self.pkt.addr, self.pkt.dsn, self.pkt.seq))
+                    logging.debug('Attempting Update DSS for {} with {}, seq # {}'.format(self.pkt.addr, self.pkt.dsn, self.pkt.seq))
                     self.update_dss(self.pkt.addr, self.pkt.dsn, self.pkt.seq)
 
             if "FIN" in opt:
-                logging.info('Attempting Teardown {}'.format(self.pkt.addr))
+                logging.debug('Attempting Teardown {}'.format(self.pkt.addr))
                 self.teardown(self.pkt.addr)
 
             if "FINACK" in opt:
-                logging.info('Attempting Teardown + End-Convo {}'.format(self.pkt.addr))
+                logging.debug('Attempting Teardown + End-Convo {}'.format(self.pkt.addr))
                 self.teardown(self.pkt.addr, end_convo=True)
 
             if "MPCAPABLE" in opt:
                 if hasattr(self.pkt, 'snd_key'):
                     snd_key = format(self.pkt.snd_key, 'x')
-                    logging.info('Attempting Add Master {} with key {}'.format(self.pkt.addr, snd_key))
+                    logging.debug('Attempting Add Master {} with key {}'.format(self.pkt.addr, snd_key))
                     self.add_master(self.pkt.addr, snd_key)
 
 
             if "MPJOIN" in opt:
                 if hasattr(self.pkt, 'rcv_token'):
                     hextoken = format(self.pkt.rcv_token, 'x')
-                    logging.info('Attempting to add Subflow for {} with token {}'.format(self.pkt.addr, hextoken))
+                    logging.debug('Attempting to add Subflow for {} with token {}'.format(self.pkt.addr, hextoken))
                     self.add_subflow(self.pkt.addr, hextoken)
 
 
@@ -120,6 +120,7 @@ class ConvoHandler(object):
         self.master_flows[addr] = {
             'token': token
         }
+        logging.info('Added Master Flow {} token {}'.format(addr, token))
 
     def add_subflow(self, addr, rcv_token):
         """
@@ -140,9 +141,9 @@ class ConvoHandler(object):
                     self.subflows[addr] = {
                         'master': master_addr
                     }
+                    logging.info('Added Subflow {} token {}'.format(addr, rcv_token))
                 else:
-                    logging.error('Something is fishy! {} should belong to master flow {},' \
-                          'but we have no record of that flow!'.format(addr,master_addr))
+                    logging.error('Orphan Subflow {}'.format(addr,master_addr))
 
     def update_dss(self, addr, dsn, seq_num):
         # type: (list, int, int) -> None
@@ -162,12 +163,14 @@ class ConvoHandler(object):
 
             if addr in self.master_flows.keys():
                 self.master_flows[addr].update(dss_dict)
+                logging.debug('Updated Master {}'.format(addr))
 
             elif addr in self.subflows.keys():
                 self.subflows[addr].update(dss_dict)
+                logging.debug('Updated Subflow {}'.format(addr))
 
         else:
-            logging.error("We don't have a record for flow {}".format(addr))
+            logging.error("No record for flow {}".format(addr))
 
     def teardown(self, addr, end_convo=False):
         """
@@ -183,8 +186,11 @@ class ConvoHandler(object):
             elif addr in self.subflows:
                 del self.subflows[addr]
 
+            logging.info('Tore Down {}'.format(addr))
+
             if end_convo:
                 self.convos.remove(generic_addr)
+                logging.info('End Convo {}'.format(addr))
 
     def export_ips(self, addr, file="ip_relationships.json"):
         if os.path.isfile(file):

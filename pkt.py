@@ -13,13 +13,13 @@ class Packet(object):
         :param pkt: A scapy packet object
         """
         if TCP in pkt:
-		self.src = (pkt[IP].src, pkt[TCP].sport)
-        	self.dst = (pkt[IP].dst, pkt[TCP].dport)
-        	self.addr = (self.src, self.dst)
-        	self.pkt = pkt
-        	self.seq = pkt[TCP].seq
-	else:
-		print pkt.summary()
+            self.src = (pkt[IP].src, pkt[TCP].sport)
+            self.dst = (pkt[IP].dst, pkt[TCP].dport)
+            self.addr = (self.src, self.dst)
+            self.pkt = pkt
+            self.seq = pkt[TCP].seq
+        else:
+            print pkt.summary()
 
     def get_opts(self):
         """
