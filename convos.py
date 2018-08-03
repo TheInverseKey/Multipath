@@ -29,6 +29,7 @@ class ConvoHandler(object):
         is_MPTCP = False
 
         self.pkt = Packet(scapy_pkt)
+        self.pkt.frag_check()
         for opt in self.pkt.get_opts():
             if opt != 'DSS':
                 logging.debug('MPTCP Subtype: {}'.format(opt))
@@ -142,6 +143,15 @@ class ConvoHandler(object):
                         'master': master_addr
                     }
                     logging.info('Added Subflow {} token {}'.format(addr, rcv_token))
+
+                    # Connection Flood Check
+                    #TODO remove magic number
+                    CONN_LIMIT = 5
+                    if len(self.ip_relationships[str(master_addr)] > CONN_LIMIT):
+                        logging.warn('Possible Connection Flood Detected')
+                        self.teardown(master_addr, end_convo=True)
+                        logging.warn('Connection Limit Passed, {} will no longer be logged'.format(master_addr))
+
                 else:
                     logging.error('Orphan Subflow {}'.format(addr,master_addr))
 
