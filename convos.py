@@ -31,32 +31,32 @@ class ConvoHandler(object):
         self.pkt = Packet(scapy_pkt)
         for opt in self.pkt.get_opts():
             if opt != 'DSS':
-                logger.info('MPTCP Subtype: {}'.format(opt))
+                logging.info('MPTCP Subtype: {}'.format(opt))
 
             if "DSS" in opt:
                 if hasattr(self.pkt, 'dsn'):
-                    logger.info('Attempting Update DSS for {} with {}, seq # {}'.format(self.pkt.addr, self.pkt.dsn, self.pkt.seq))
+                    logging.info('Attempting Update DSS for {} with {}, seq # {}'.format(self.pkt.addr, self.pkt.dsn, self.pkt.seq))
                     self.update_dss(self.pkt.addr, self.pkt.dsn, self.pkt.seq)
 
             if "FIN" in opt:
-                logger.info('Attempting Teardown {}'.format(self.pkt.addr))
+                logging.info('Attempting Teardown {}'.format(self.pkt.addr))
                 self.teardown(self.pkt.addr)
 
             if "FINACK" in opt:
-                logger.info('Attempting Teardown + End-Convo {}'.format(self.pkt.addr))
+                logging.info('Attempting Teardown + End-Convo {}'.format(self.pkt.addr))
                 self.teardown(self.pkt.addr, end_convo=True)
 
             if "MPCAPABLE" in opt:
                 if hasattr(self.pkt, 'snd_key'):
                     snd_key = format(self.pkt.snd_key, 'x')
-                    logger.info('Attempting Add Master {} with key {}'.format(self.pkt.addr, snd_key))
+                    logging.info('Attempting Add Master {} with key {}'.format(self.pkt.addr, snd_key))
                     self.add_master(self.pkt.addr, snd_key)
 
 
             if "MPJOIN" in opt:
                 if hasattr(self.pkt, 'rcv_token'):
                     hextoken = format(self.pkt.rcv_token, 'x')
-                    logger.info('Attempting to add Subflow for {} with token {}'.format(self.pkt.addr, hextoken))
+                    logging.info('Attempting to add Subflow for {} with token {}'.format(self.pkt.addr, hextoken))
                     self.add_subflow(self.pkt.addr, hextoken)
 
 
@@ -89,11 +89,11 @@ class ConvoHandler(object):
             self.pkt.convert(abs(self.pkt.seq + diff), src=final_addr[0], dst=final_addr[1])
 
         except KeyError:
-            logger.error('Oh shit, we have a packet but no listed DSN for it! \n '
+            logging.error('Oh shit, we have a packet but no listed DSN for it! \n '
                          'Here\'s the adress sequence number for reference: \n '
                          'addr: {} \n seq: {}'.format(self.pkt.addr, self.pkt.seq))
 
-        logger.info('Packet to Send: {} -> {} seq {}'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
+        logging.info('Packet to Send: {} -> {} seq {}'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
         self.pkt.send()
 
 
@@ -107,7 +107,7 @@ class ConvoHandler(object):
 
         # If session was not terminated properly, init teardown
         if generic_addr in self.convos:
-            logger.info('Attempting Impromptu Teardown + End-Convo {}'.format(self.pkt.addr))
+            logging.info('Attempting Impromptu Teardown + End-Convo {}'.format(self.pkt.addr))
             self.teardown(self.pkt.addr, end_convo=True)
         self.ip_relationships[str(addr)] = []
         self.convos.add(generic_addr)
@@ -128,7 +128,7 @@ class ConvoHandler(object):
         :param token: receiver's token
         :return:
         """
-        logger.info('Add Subflow: {}'.format(addr))
+        logging.info('Add Subflow: {}'.format(addr))
         generic_addr = frozenset(addr)
         self.convos.add(generic_addr)
         # Find matching recv_key
@@ -141,7 +141,7 @@ class ConvoHandler(object):
                         'master': master_addr
                     }
                 else:
-                    logger.error('Something is fishy! {} should belong to master flow {},' \
+                    logging.error('Something is fishy! {} should belong to master flow {},' \
                           'but we have no record of that flow!'.format(addr,master_addr))
 
     def update_dss(self, addr, dsn, seq_num):
@@ -152,7 +152,7 @@ class ConvoHandler(object):
         :param dsn:     int packet dsn
         :param seq_num: int packet sequence number
         """
-        logger.info('Update DSS: {}'.format(addr))
+        logging.info('Update DSS: {}'.format(addr))
         generic_addr = frozenset(addr)
         if generic_addr in self.convos:
             dss_dict = {
@@ -167,7 +167,7 @@ class ConvoHandler(object):
                 self.subflows[addr].update(dss_dict)
 
         else:
-            logger.error("We don't have a record for flow {}".format(addr))
+            logging.error("We don't have a record for flow {}".format(addr))
 
     def teardown(self, addr, end_convo=False):
         """
