@@ -38,25 +38,34 @@ class ConvoHandler(object):
         self.pkt = Packet(scapy_pkt)
         for opt in self.pkt.get_opts():
             if opt != 'DSS':
-                print 'MPTCP Subtype:', opt
+                logger.info('MPTCP Subtype: {}'.format(opt))
+
             if "DSS" in opt:
                 if hasattr(self.pkt, 'dsn'):
+                    logger.info('Attempting Update DSS for {} with {}, seq # {}'.format(self.pkt.addr, self.pkt.dsn, self.pkt.seq))
                     self.update_dss(self.pkt.addr, self.pkt.dsn, self.pkt.seq)
 
             if "FIN" in opt:
+                logger.info('Attempting Teardown {}'.format(self.pkt.addr))
                 self.teardown(self.pkt.addr)
 
             if "FINACK" in opt:
+                logger.info('Attempting Teardown + End-Convo {}'.format(self.pkt.addr))
                 self.teardown(self.pkt.addr, end_convo=True)
 
             if "MPCAPABLE" in opt:
                 if hasattr(self.pkt, 'snd_key'):
                     snd_key = format(self.pkt.snd_key, 'x')
+                    logger.info('Attempting Add Master {} with key {}'.format(self.pkt.addr, snd_key))
                     self.add_master(self.pkt.addr, snd_key)
+
 
             if "MPJOIN" in opt:
                 if hasattr(self.pkt, 'rcv_token'):
-                    self.add_subflow(self.pkt.addr, format(self.pkt.rcv_token, 'x'))
+                    hextoken = format(self.pkt.rcv_token, 'x')
+                    logger.info('Attempting to add Subflow for {} with token {}'.format(self.pkt.addr, hextoken))
+                    self.add_subflow(self.pkt.addr, hextoken)
+
 
     def push_packet_as_single_stream(self):
         #TODO Maybe put this in it's own function, idk anymore man
@@ -71,7 +80,6 @@ class ConvoHandler(object):
                 diff = self.subflows[self.pkt.addr]['diff']
 
             except KeyError:
-                print self.subflows[self.pkt.addr]
                 return
 
         # handle packet as master (if the packet got this far it should already have a record in the dict)
@@ -92,7 +100,7 @@ class ConvoHandler(object):
                          'Here\'s the adress sequence number for reference: \n '
                          'addr: {} \n seq: {}'.format(self.pkt.addr, self.pkt.seq))
 
-        logger.info('Packet to Send: {} -> {} : {}'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
+        logger.info('Packet to Send: {} -> {} seq {}'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
         self.pkt.send()
 
 
@@ -102,20 +110,23 @@ class ConvoHandler(object):
         :param addr:    tuple with (src, dst)
         :param snd_key: hex value of sender's key in packet
         """
-        logger.info('Add Master: {}'.format(addr))
-        self.ip_relationships[str(addr)] = []
         generic_addr = frozenset(addr)
+
+        # If session was not terminated properly, init teardown
+        if generic_addr in self.convos:
+            logger.info('Attempting Impromptu Teardown + End-Convo {}'.format(self.pkt.addr))
+            self.teardown(self.pkt.addr, end_convo=True)
+        self.ip_relationships[str(addr)] = []
         self.convos.add(generic_addr)
         # Derive token from key
-	# If odd len string, 0pad it
-	if len(snd_key) % 2:
-		snd_key = '0' + snd_key
-	print "*** " + str(len(snd_key))
-	snd_key = binascii.unhexlify(snd_key)
-	token = hashlib.sha1(snd_key).hexdigest()[:8]
-	self.master_flows[addr] = {
-		'token': token
-	}
+        # If odd len string, 0 pad it
+        if len(snd_key) % 2:
+            snd_key = '0' + snd_key
+        snd_key = binascii.unhexlify(snd_key)
+        token = hashlib.sha1(snd_key).hexdigest()[:8]
+        self.master_flows[addr] = {
+            'token': token
+        }
 
     def add_subflow(self, addr, rcv_token):
         """
