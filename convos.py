@@ -93,9 +93,8 @@ class ConvoHandler(object):
                          'Here\'s the adress sequence number for reference: \n '
                          'addr: {} \n seq: {}'.format(self.pkt.addr, self.pkt.seq))
 
-        logging.info('Packet to Send: {} -> {} seq {}'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
         self.pkt.send()
-
+        logging.info('Sent: {} -> {} seq {}'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
 
     def add_master(self, addr, snd_key):
         """
@@ -109,6 +108,7 @@ class ConvoHandler(object):
         if generic_addr in self.convos:
             logging.info('Attempting Impromptu Teardown + End-Convo {}'.format(self.pkt.addr))
             self.teardown(self.pkt.addr, end_convo=True)
+
         self.ip_relationships[str(addr)] = []
         self.convos.add(generic_addr)
         # Derive token from key
@@ -153,7 +153,7 @@ class ConvoHandler(object):
         :param dsn:     int packet dsn
         :param seq_num: int packet sequence number
         """
-        logging.info('Update DSS: {}'.format(addr))
+
         generic_addr = frozenset(addr)
         if generic_addr in self.convos:
             dss_dict = {
@@ -168,6 +168,8 @@ class ConvoHandler(object):
             elif addr in self.subflows.keys():
                 self.subflows[addr].update(dss_dict)
                 logging.debug('Updated Subflow {}'.format(addr))
+
+            logging.info('Updated DSS: {} dsn {}'.format(addr, dsn))
 
         else:
             logging.error("No record for flow {}".format(addr))
@@ -212,6 +214,7 @@ if __name__ == '__main__':
                 convo.push_packet_as_single_stream()
             except Exception as e:
                 print 'Bug: ', e
+
     sniff(iface="eno1", prn=handler, filter="tcp", store=0)
 
 
