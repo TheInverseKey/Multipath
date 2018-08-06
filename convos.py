@@ -146,7 +146,7 @@ class ConvoHandler(object):
 
                     # Connection Flood Check
                     #TODO remove magic number
-                    CONN_LIMIT = 10
+                    CONN_LIMIT == 10
                     if len(self.ip_relationships[str(master_addr)] > CONN_LIMIT):
                         logging.warn('Possible Connection Flood Detected')
                         self.teardown(master_addr, end_convo=True)
@@ -215,8 +215,9 @@ class ConvoHandler(object):
 
 
 if __name__ == '__main__':
-    #pcap = rdpcap('FinalDemo.pcap')
+    pcap = rdpcap('fragmenttest.pcap')
     convo = ConvoHandler()
+"""
     def handler(pkt):
         if TCP in pkt:
             convo.handle_packet(pkt)
@@ -229,10 +230,11 @@ if __name__ == '__main__':
 
 
 """
-    for packet in pcap:
-        convo.handle_packet(packet)
-        try:
-            convo.push_packet_as_single_stream()
-        except Exception as e:
-            print 'Bug: ', e
-"""
+for packet in pcap:
+    convo.handle_packet(packet)
+    try:
+        convo.push_packet_as_single_stream()
+    except Exception as e:
+        print 'Bug: ', e
+
+
