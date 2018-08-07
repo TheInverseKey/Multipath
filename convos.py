@@ -154,8 +154,10 @@ class ConvoHandler(object):
                         logging.warn("Connection Limit Passed, {} will no longer be logged".format(master_addr))
 
                         # Send custom msg to snort to trigger snort alert
-                        relay_pkt = IP(dst="127.0.0.1")/TCP()/"ff0db992256ad5c44c979bf4be0234a919eccdc7"
-                        relay_pkt.send()
+                        relay_pkt = IP(src="127.0.0.1", dst="127.0.0.1") / TCP(dport=80) / Raw("ff0db992256ad5c44c979bf4be0234a919eccdc7")
+                        scapy.all.send(relay_pkt, iface="lo")
+                        print "***packet flood sent***"
+
                         return "flood"
 
                 else:
@@ -236,9 +238,9 @@ class ConvoHandler(object):
         del(self.ip_relationships[str(addr)])
 
 if __name__ == '__main__':
-    #pcap = rdpcap('fragmenttest.pcap')
+    pcap = rdpcap('speedtest.pcap')
     convo = ConvoHandler()
-
+"""
     def handler(pkt):
         if TCP in pkt:
             if convo.handle_packet(pkt) == "flood":
@@ -250,14 +252,15 @@ if __name__ == '__main__':
                 print 'Bug: ', e
 
     sniff(iface="eno1", prn=handler, filter="tcp", store=0)
-
-
 """
+
+
 for packet in pcap:
-	convo.handle_packet(packet)
-	try:
-		convo.push_packet_as_single_stream()
+    if TCP in packet:
+        convo.handle_packet(packet)
+        try:
+            convo.push_packet_as_single_stream()
         except Exception as e:
-		print 'Bug: ', e
-"""
+            print 'Bug: ', e
+
 
