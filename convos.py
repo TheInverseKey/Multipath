@@ -16,18 +16,16 @@ class ConvoHandler(object):
     Manages the multiple active multipath convos
     """
     def __init__(self):
-        self.convos = set()
-        self.master_flows = {}
-        self.subflows = {}
-        self.ip_relationships = {}
+        self.convos = set()         # set of connections (1 entry for each stream)
+        self.master_flows = {}      # dict of master flows and their info
+        self.subflows = {}          # dict of subflows and their info
+        self.ip_relationships = {}  # dict of master:[subflows*] relationship
 
     def handle_packet(self, scapy_pkt):
         """
         Get packet flags/options and then act accordingly
         :param scapy_pkt: a packet object from scapy library
         """
-        is_MPTCP = False
-
         self.pkt = Packet(scapy_pkt)
         for opt in self.pkt.get_opts():
             if opt != 'DSS':
@@ -57,11 +55,13 @@ class ConvoHandler(object):
                 if hasattr(self.pkt, 'rcv_token'):
                     hextoken = format(self.pkt.rcv_token, 'x')
                     logging.debug('Attempting to add Subflow for {} with token {}'.format(self.pkt.addr, hextoken))
-                    if self.add_subflow(self.pkt.addr, hextoken)=="flood":
-                        return "flood"
-
+                    return self.add_subflow(self.pkt.addr, hextoken)
 
     def push_packet_as_single_stream(self):
+        """
+        Test for subflow or master flow, then convert to new seqence number and address, then send the packet
+        :return:
+        """
         #TODO Maybe put this in it's own function, idk anymore man
         if not hasattr(self, 'pkt'):
             raise AttributeError('You need a packet to do this')
@@ -99,33 +99,37 @@ class ConvoHandler(object):
 
     def add_master(self, addr, snd_key):
         """
-        Add a new convo to the master_print opts if opts != 'DSS' flows dict (and derive token from key)
+        Add a new convo to the master_flows dict and attempt to add a convos entry, then derive token from key
         :param addr:    tuple with (src, dst)
         :param snd_key: hex value of sender's key in packet
         """
         generic_addr = frozenset(addr)
 
         # If session was not terminated properly, init teardown
-       # if generic_addr in self.convos:
-       #     logging.info('Attempting Impromptu Teardown + End-Convo {}'.format(self.pkt.addr))
-       #     self.teardown(self.pkt.addr, end_convo=True)
+        # if generic_addr in self.convos:
+        #     logging.info('Attempting Impromptu Teardown + End-Convo {}'.format(self.pkt.addr))
+        #     self.teardown(self.pkt.addr, end_convo=True)
 
-        self.ip_relationships[str(addr)] = []
+        self.ip_relationships[str(addr)] = list()
         self.convos.add(generic_addr)
+
         # Derive token from key
         # If odd len string, 0 pad it
         if len(snd_key) % 2:
             snd_key = '0' + snd_key
         snd_key = binascii.unhexlify(snd_key)
         token = hashlib.sha1(snd_key).hexdigest()[:8]
-        self.master_flows[addr] = {
-            'token': token
-        }
+
+        self.master_flows[addr] = {'token': token}
         logging.info('Added Master Flow {} token {}'.format(addr, token))
 
     def add_subflow(self, addr, rcv_token):
         """
-        Add a new convo to the subflows dict and find its master
+        Attempt to add convo to convos set,
+            if master addr is found:
+                get token
+                update dicts
+                check for connection flooding
         :param addr:  tuple (src, dst)
         :param token: receiver's token
         :return:
@@ -136,8 +140,10 @@ class ConvoHandler(object):
         # Find matching recv_key
         for flow, info in self.master_flows.iteritems():
             if info['token'] == rcv_token:
+                # matching token is sent by opposite party, so we have to reverse the addr to get the parent of this subflow
                 master_addr = flow[::-1]
                 if master_addr in self.master_flows.keys():
+                    # TODO remove magic number
                     CONN_LIMIT = 0
                     self.ip_relationships[str(master_addr)].append(str(addr))
                     self.subflows[addr] = {'master': master_addr}
@@ -147,13 +153,7 @@ class ConvoHandler(object):
                         self.teardown(master_addr, end_convo=True)
                         logging.warn("Connection Limit Passed, {} will no longer be logged".format(master_addr))
                         return "flood"
-                    else:
-                        self.ip_relationships[str(master_addr)].append(str(addr))
-                        self.subflows[addr] = {
-                            'master': master_addr
-                        }
-                        logging.info('Added Subflow {} token {}'.format(addr, rcv_token))
-                        print self.ip_relationships[str(master_addr)]
+
                 else:
                     logging.error('Orphan Subflow {}'.format(addr,master_addr))
 
@@ -194,10 +194,10 @@ class ConvoHandler(object):
         """
         generic_addr = frozenset(addr)
         if generic_addr in self.convos:
-            if addr in self.master_flows:
+            if addr in self.master_flows.keys():
                 del self.master_flows[addr]
                 self.export_ips(addr)
-            elif addr in self.subflows:
+            elif addr in self.subflows.keys():
                 del self.subflows[addr]
 
             logging.info('Tore Down {}'.format(addr))
@@ -207,14 +207,28 @@ class ConvoHandler(object):
                 logging.info('End Convo {}'.format(addr))
 
     def export_ips(self, addr, file="ip_relationships.json"):
+        """
+        :param addr: master convo tuple ((src_ip, src_port), (dest_ip, dest_port))
+        :param file: file to dump to
+        :return: None
+        """
         if os.path.isfile(file):
             perms = 'a'
+
         else:
             perms = 'w+'
 
-        with open(file, perms) as log_file:
-            log_file.write(json.dumps(self.ip_relationships[str(addr)]))
+        #filter ip_relationships down to one key (addr)
+        new_master_entry = {master:subflow for master, subflow in self.ip_relationships.iteritems() if master == str(addr)}
 
+        if not len(new_master_entry.keys()):
+            logging.warn("addr {} doesn't exist within ip_relationships".format(addr))
+            return
+
+        with open(file, perms) as log_file:
+            log_file.write(json.dumps(new_master_entry))
+
+        del(self.ip_relationships[str(addr)])
 
 if __name__ == '__main__':
     pcap = rdpcap('fragmenttest.pcap')
