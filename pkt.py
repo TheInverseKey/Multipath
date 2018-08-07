@@ -56,8 +56,9 @@ class Packet(object):
         if self.pkt[TCP].flags == 0x01:
             opts.add("FIN")
 
-        elif self.pkt[TCP].flags == 0x11:
+        if self.pkt[TCP].flags == 0x11:
             opts.add("FINACK")
+        
         return opts
 
     def convert(self, new_seq, src=None, dst=None):
@@ -128,16 +129,25 @@ class Packet(object):
                 if hasattr(opt.mptcp, attr):
                     yield getattr(opt.mptcp, attr, None)
 
-    def frag_check(self, max_payload_size=2):
+    def frag_check(self, max_payload_size=0):
         # type: (int) -> 2
         """
         Logs warning if fragmentation detected
         :param max_payload_size: Payload size threshold to trigger fragmentation warning
         :return: None
         """
-        mp_length = self.get_mp_opt('length').next()
-        if mp_length <= max_payload_size:
-            logging.warn('Possible Fragmentation Attack: Payload below threshold {} bytes'.format(max_payload_size))
+        #payload_length = 0
+        #try:
+        #    payload_length = self.get_mp_opt('length').next()
+        #except StopIteration:
+        #    pass
+        payload_length = len(self.pkt[TCP].payload)
+        opts = self.pkt[TCP].flags
+        if (opts & 0x10) and (payload_length <= max_payload_size):
+            logging.debug('Payload below threshold {} bytes'.format(max_payload_size))       
+            return False
+        #except StopIteration:
+        #    logging.debug("packet with 0 length {} seq {}".format(self.addr, self.seq))
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import logging
 import json
 import os
 
-logging.basicConfig(filename='Convo.log',level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 #PyCharm Hack
 TCP = TCP
@@ -19,6 +19,7 @@ class ConvoHandler(object):
         self.convos = set()
         self.master_flows = {}
         self.subflows = {}
+        self.frag_counter = {}
         self.ip_relationships = {}
 
     def handle_packet(self, scapy_pkt):
@@ -27,17 +28,22 @@ class ConvoHandler(object):
         :param scapy_pkt: a packet object from scapy library
         """
         is_MPTCP = False
-
         self.pkt = Packet(scapy_pkt)
-        self.pkt.frag_check()
-        for opt in self.pkt.get_opts():
+        tcp_opts = set(list(self.pkt.get_opts()))
+        zero_len_opts = set(["FIN", "FINACK", "MPJOIN", "MPCAPABLE"])
+        
+        found_frag = None
+        if not tcp_opts.intersection(zero_len_opts):
+            found_frag = not self.pkt.frag_check()
+
+        for opt in tcp_opts:
             if opt != 'DSS':
                 logging.debug('MPTCP Subtype: {}'.format(opt))
 
             if "DSS" in opt:
                 if hasattr(self.pkt, 'dsn'):
                     logging.debug('Attempting Update DSS for {} with {}, seq # {}'.format(self.pkt.addr, self.pkt.dsn, self.pkt.seq))
-                    self.update_dss(self.pkt.addr, self.pkt.dsn, self.pkt.seq)
+                    self.update_dss(self.pkt.addr, self.pkt.dsn, self.pkt.seq, frag=found_frag)
 
             if "FIN" in opt:
                 logging.debug('Attempting Teardown {}'.format(self.pkt.addr))
@@ -53,12 +59,28 @@ class ConvoHandler(object):
                     logging.debug('Attempting Add Master {} with key {}'.format(self.pkt.addr, snd_key))
                     self.add_master(self.pkt.addr, snd_key)
 
-
             if "MPJOIN" in opt:
                 if hasattr(self.pkt, 'rcv_token'):
                     hextoken = format(self.pkt.rcv_token, 'x')
                     logging.debug('Attempting to add Subflow for {} with token {}'.format(self.pkt.addr, hextoken))
                     self.add_subflow(self.pkt.addr, hextoken)
+
+
+    def add_frag(self, addr, count=1, limit=20, subflow=False):
+        if subflow and addr in self.subflows.keys():
+            addr = self.subflows[addr]['master']
+
+        if addr in self.frag_counter.keys():
+            self.frag_counter[addr] += 1
+
+        else:
+            self.frag_counter[addr] = 1
+
+        if self.frag_counter[addr] > limit:
+            logging.warn("Convo {} has exceeded fragmentation limit of {}.  Possible Fragmentation Attack".format(addr, limit))
+        
+        #from pprint import pprint
+        #pprint(self.frag_counter)
 
 
     def push_packet_as_single_stream(self):
@@ -139,23 +161,27 @@ class ConvoHandler(object):
                 master_addr = flow[::-1]
                 if master_addr in self.master_flows.keys():
                     self.ip_relationships[str(master_addr)].append(str(addr))
-                    self.subflows[addr] = {
-                        'master': master_addr
-                    }
-                    logging.info('Added Subflow {} token {}'.format(addr, rcv_token))
-
-                    # Connection Flood Check
-                    #TODO remove magic number
-                    CONN_LIMIT == 10
-                    if len(self.ip_relationships[str(master_addr)] > CONN_LIMIT):
+                    
+                    # connection flood check
+                    # TODO remove magic number
+                    CONN_LIMIT = 1
+                    if len(self.ip_relationships[str(master_addr)]) >= CONN_LIMIT:
                         logging.warn('Possible Connection Flood Detected')
                         self.teardown(master_addr, end_convo=True)
                         logging.warn('Connection Limit Passed, {} will no longer be logged'.format(master_addr))
+                        break # teardown() removes key from master_flows dict, so we break here
+                    
+                    else:
+                        self.subflows[addr] = {
+                            'master': master_addr
+                        }
+                        logging.info('Added Subflow {} token {}'.format(addr, rcv_token))
 
                 else:
-                    logging.error('Orphan Subflow {}'.format(addr,master_addr))
+                    logging.debug('Orphan Subflow {}'.format(addr,master_addr))
+                    return "conn flood"
 
-    def update_dss(self, addr, dsn, seq_num):
+    def update_dss(self, addr, dsn, seq_num, frag=False):
         # type: (list, int, int) -> None
         """
         Update a flows DSS map
@@ -174,15 +200,19 @@ class ConvoHandler(object):
             if addr in self.master_flows.keys():
                 self.master_flows[addr].update(dss_dict)
                 logging.debug('Updated Master {}'.format(addr))
+                if frag:
+                    self.add_frag(str(addr))
 
             elif addr in self.subflows.keys():
                 self.subflows[addr].update(dss_dict)
                 logging.debug('Updated Subflow {}'.format(addr))
+                if frag:
+                    self.add_frag(str(addr), subflow=True)
 
-            logging.info('Updated DSS: {} dsn {}'.format(addr, dsn))
+            logging.debug('Updated DSS: {} dsn {}'.format(addr, dsn))
 
         else:
-            logging.error("No record for flow {}".format(addr))
+            logging.debug("No record for flow {}".format(addr))
 
     def teardown(self, addr, end_convo=False):
         """
@@ -217,10 +247,12 @@ class ConvoHandler(object):
 if __name__ == '__main__':
     pcap = rdpcap('fragmenttest.pcap')
     convo = ConvoHandler()
-"""
+
+
     def handler(pkt):
         if TCP in pkt:
-            convo.handle_packet(pkt)
+            if convo.handle_packet(pkt) == "conn flood":
+                return
             try:
                 convo.push_packet_as_single_stream()
             except Exception as e:
@@ -231,10 +263,11 @@ if __name__ == '__main__':
 
 """
 for packet in pcap:
-    convo.handle_packet(packet)
+    if convo.handle_packet(packet) == "conn flood":
+        continue # tripped security alarm, don't send packet
     try:
         convo.push_packet_as_single_stream()
     except Exception as e:
         print 'Bug: ', e
-
-
+"""
+ 
