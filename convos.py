@@ -152,6 +152,10 @@ class ConvoHandler(object):
                         logging.warn("Possible Connection Flood Detected on {}".format(master_addr))
                         self.teardown(master_addr, end_convo=True)
                         logging.warn("Connection Limit Passed, {} will no longer be logged".format(master_addr))
+
+                        # Send custom msg to snort to trigger snort alert
+                        relay_pkt = IP(dst="127.0.0.1")/TCP()/"ff0db992256ad5c44c979bf4be0234a919eccdc7"
+                        relay_pkt.send()
                         return "flood"
 
                 else:
@@ -227,7 +231,7 @@ class ConvoHandler(object):
 
         with open(file, perms) as log_file:
             log_file.write(json.dumps(new_master_entry))
-            log_file.write("/n")
+            log_file.write("\n")
             log.debug("Wrote to {}".format(file))
         del(self.ip_relationships[str(addr)])
 
