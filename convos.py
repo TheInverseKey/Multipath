@@ -117,6 +117,7 @@ class ConvoHandler(object):
                          'addr: {} \n seq: {}'.format(self.pkt.addr, self.pkt.seq))
 
         self.pkt.send()
+        print self.pkt.pkt.summary()
         logging.info('Sent: {} -> {} seq {}'.format(self.pkt.pkt[TCP].sport, self.pkt.pkt[TCP].dport, self.pkt.seq))
 
     def add_master(self, addr, snd_key):
@@ -164,13 +165,13 @@ class ConvoHandler(object):
                     
                     # connection flood check
                     # TODO remove magic number
-                    CONN_LIMIT = 1
+                    CONN_LIMIT = 10
                     if len(self.ip_relationships[str(master_addr)]) >= CONN_LIMIT:
                         logging.warn('Possible Connection Flood Detected')
-                        self.teardown(master_addr, end_convo=True)
+                        # self.teardown(master_addr, end_convo=True)
                         logging.warn('Connection Limit Passed, {} will no longer be logged'.format(master_addr))
-                        break # teardown() removes key from master_flows dict, so we break here
-                    
+                        return "conn flood"
+                                            
                     else:
                         self.subflows[addr] = {
                             'master': master_addr
@@ -178,8 +179,7 @@ class ConvoHandler(object):
                         logging.info('Added Subflow {} token {}'.format(addr, rcv_token))
 
                 else:
-                    logging.debug('Orphan Subflow {}'.format(addr,master_addr))
-                    return "conn flood"
+                    logging.info('Orphan Subflow {}'.format(addr,master_addr))
 
     def update_dss(self, addr, dsn, seq_num, frag=False):
         # type: (list, int, int) -> None
@@ -213,6 +213,7 @@ class ConvoHandler(object):
 
         else:
             logging.debug("No record for flow {}".format(addr))
+ 
 
     def teardown(self, addr, end_convo=False):
         """
@@ -220,6 +221,7 @@ class ConvoHandler(object):
         :param addr: tuple (src, dst)
         :param end_convo: Used when a FINACK is given, remove convo frozenset entry
         """
+        return
         generic_addr = frozenset(addr)
         if generic_addr in self.convos:
             if addr in self.master_flows:
@@ -231,6 +233,7 @@ class ConvoHandler(object):
             logging.info('Tore Down {}'.format(addr))
 
             if end_convo:
+                print self.convos
                 self.convos.remove(generic_addr)
                 logging.info('End Convo {}'.format(addr))
 
