@@ -227,11 +227,12 @@ class ConvoHandler(object):
 
         with open(file, perms) as log_file:
             log_file.write(json.dumps(new_master_entry))
-
+            log_file.write("/n")
+            log.debug("Wrote to {}".format(file))
         del(self.ip_relationships[str(addr)])
 
 if __name__ == '__main__':
-    pcap = rdpcap('fragmenttest.pcap')
+    #pcap = rdpcap('fragmenttest.pcap')
     convo = ConvoHandler()
 
     def handler(pkt):
