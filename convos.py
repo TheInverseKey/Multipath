@@ -6,7 +6,7 @@ import logging
 import json
 import os
 
-logging.basicConfig(filename='Convo.log',level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 #PyCharm Hack
 TCP = TCP
@@ -57,7 +57,8 @@ class ConvoHandler(object):
                 if hasattr(self.pkt, 'rcv_token'):
                     hextoken = format(self.pkt.rcv_token, 'x')
                     logging.debug('Attempting to add Subflow for {} with token {}'.format(self.pkt.addr, hextoken))
-                    self.add_subflow(self.pkt.addr, hextoken)
+                    if self.add_subflow(self.pkt.addr, hextoken)=="flood":
+                        return "flood"
 
 
     def push_packet_as_single_stream(self):
@@ -105,9 +106,9 @@ class ConvoHandler(object):
         generic_addr = frozenset(addr)
 
         # If session was not terminated properly, init teardown
-        if generic_addr in self.convos:
-            logging.info('Attempting Impromptu Teardown + End-Convo {}'.format(self.pkt.addr))
-            self.teardown(self.pkt.addr, end_convo=True)
+       # if generic_addr in self.convos:
+       #     logging.info('Attempting Impromptu Teardown + End-Convo {}'.format(self.pkt.addr))
+       #     self.teardown(self.pkt.addr, end_convo=True)
 
         self.ip_relationships[str(addr)] = []
         self.convos.add(generic_addr)
@@ -137,11 +138,22 @@ class ConvoHandler(object):
             if info['token'] == rcv_token:
                 master_addr = flow[::-1]
                 if master_addr in self.master_flows.keys():
+                    CONN_LIMIT = 0
                     self.ip_relationships[str(master_addr)].append(str(addr))
-                    self.subflows[addr] = {
-                        'master': master_addr
-                    }
+                    self.subflows[addr] = {'master': master_addr}
                     logging.info('Added Subflow {} token {}'.format(addr, rcv_token))
+                    if len(self.ip_relationships[str(master_addr)]) > CONN_LIMIT:    
+                        logging.warn("Possible Connection Flood Detected on {}".format(master_addr))
+                        self.teardown(master_addr, end_convo=True)
+                        logging.warn("Connection Limit Passed, {} will no longer be logged".format(master_addr))
+                        return "flood"
+                    else:
+                        self.ip_relationships[str(master_addr)].append(str(addr))
+                        self.subflows[addr] = {
+                            'master': master_addr
+                        }
+                        logging.info('Added Subflow {} token {}'.format(addr, rcv_token))
+                        print self.ip_relationships[str(master_addr)]
                 else:
                     logging.error('Orphan Subflow {}'.format(addr,master_addr))
 
@@ -205,11 +217,14 @@ class ConvoHandler(object):
 
 
 if __name__ == '__main__':
-    #pcap = rdpcap('FinalDemo.pcap')
+    pcap = rdpcap('fragmenttest.pcap')
     convo = ConvoHandler()
+
     def handler(pkt):
         if TCP in pkt:
-            convo.handle_packet(pkt)
+            if convo.handle_packet(pkt) == "flood":
+                logging.warn("Not Sending")
+                return
             try:
                 convo.push_packet_as_single_stream()
             except Exception as e:
@@ -219,10 +234,11 @@ if __name__ == '__main__':
 
 
 """
-    for packet in pcap:
-        convo.handle_packet(packet)
-        try:
-            convo.push_packet_as_single_stream()
+for packet in pcap:
+	convo.handle_packet(packet)
+	try:
+		convo.push_packet_as_single_stream()
         except Exception as e:
-            print 'Bug: ', e
+		print 'Bug: ', e
 """
+
