@@ -148,7 +148,7 @@ class ConvoHandler(object):
                     self.ip_relationships[str(master_addr)].append(str(addr))
                     self.subflows[addr] = {'master': master_addr}
                     logging.info('Added Subflow {} token {}'.format(addr, rcv_token))
-                    if len(self.ip_relationships[str(master_addr)]) > CONN_LIMIT:    
+                    if len(self.ip_relationships[str(master_addr)][0]) > CONN_LIMIT:
                         logging.warn("Possible Connection Flood Detected on {}".format(master_addr))
                         self.teardown(master_addr, end_convo=True)
                         logging.warn("Connection Limit Passed, {} will no longer be logged".format(master_addr))
